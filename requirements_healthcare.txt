@@ -1,0 +1,30 @@
+# Existing dependencies
+google-genai>=0.2.0
+fastmcp>=0.1.0
+pipedream>=0.3.0
+python-dotenv>=1.0.0
+
+# RAG System
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+
+# Document Processing
+pypdf>=3.0.0
+pdfplumber>=0.10.0
+
+# CLI Interface
+rich>=13.0.0
+prompt-toolkit>=3.0.0
+
+# Data Handling
+python-dateutil>=2.8.0
+validators>=0.22.0
+
+# Web Framework (for future web UI)
+fastapi>=0.104.0
+uvicorn>=0.24.0
+websockets>=12.0
+
+# Utilities
+requests>=2.31.0
+aiohttp>=3.9.0

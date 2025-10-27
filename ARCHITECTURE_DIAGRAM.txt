@@ -1,0 +1,363 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                     HEALTHCARE ASSISTANT ARCHITECTURE                      ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           USER INTERFACE LAYER                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────────────┐          ┌───────────────────────────┐       │
+│  │     PATIENT INTERFACE    │          │   DOCTOR DASHBOARD        │       │
+│  ├──────────────────────────┤          ├───────────────────────────┤       │
+│  │ • Ask Medical Questions  │          │ • View Pending Bookings   │       │
+│  │ • Book Appointments      │          │ • Confirm Appointments    │       │
+│  │ • View Schedule          │          │ • Manage Availability     │       │
+│  │ • Check History          │          │ • View Patient History    │       │
+│  │ • Personalized Greeting  │          │ • Calendar Management     │       │
+│  └────────────┬─────────────┘          └───────────┬───────────────┘       │
+│               │                                    │                       │
+│               └────────────────┬───────────────────┘                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                 │
+                     ┌───────────▼────────────┐
+                     │  MAIN ORCHESTRATOR     │
+                     │ (healthcare_assistant) │
+                     └───────────┬────────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        │                        │                        │
+┌───────▼────────┐      ┌────────▼────────┐     ┌───────▼────────┐
+│   RAG ENGINE   │      │    SCHEDULER    │     │  MEMORY MGR    │
+├────────────────┤      ├─────────────────┤     ├────────────────┤
+│                │      │                 │     │                │
+│ • Vector DB    │      │ • Availability  │     │ • Conversation │
+│ • Embeddings   │      │ • Conflict Det  │     │   History      │
+│ • Retrieval    │      │ • Booking Logic │     │ • User Context │
+│ • Citations    │      │ • Confirmation  │     │ • Analytics    │
+│ • Q&A Gen      │      │ • Calendar Sync │     │ • Profiles     │
+│                │      │                 │     │                │
+└────────┬───────┘      └────────┬────────┘     └────────┬───────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            DATA LAYER                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐     │
+│  │   VECTOR DB      │  │   SQLITE DB      │  │  MEDICAL DOCUMENTS   │     │
+│  ├──────────────────┤  ├──────────────────┤  ├──────────────────────┤     │
+│  │ • ChromaDB       │  │ • users          │  │ • Stroke PDFs        │     │
+│  │ • Doc Chunks     │  │ • appointments   │  │ • WHO Guidelines     │     │
+│  │ • Embeddings     │  │ • conversations  │  │ • Mayo Clinic Docs   │     │
+│  │ • Metadata       │  │ • documents      │  │ • CDC Resources      │     │
+│  │                  │  │ • preferences    │  │ • Research Papers    │     │
+│  └──────────────────┘  └──────────────────┘  └──────────────────────┘     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                 │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        EXTERNAL SERVICES LAYER                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐     │
+│  │   GOOGLE GEMINI  │  │    PIPEDREAM     │  │  GOOGLE CALENDAR     │     │
+│  ├──────────────────┤  ├──────────────────┤  ├──────────────────────┤     │
+│  │ • LLM (2.0 Flash)│  │ • OAuth Manager  │  │ • Event Creation     │     │
+│  │ • Embeddings API │  │ • MCP Server     │  │ • Availability Check │     │
+│  │ • Function Call  │  │ • User Auth      │  │ • Conflict Detection │     │
+│  │ • Chat Session   │  │ • Token Mgmt     │  │ • Status Updates     │     │
+│  │ • Temperature 0.1│  │                  │  │ • Color Coding       │     │
+│  └──────────────────┘  └──────────────────┘  └──────────────────────┘     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                              DATA FLOW DIAGRAMS                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         RAG Q&A FLOW                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    User Question: "What are the symptoms of a stroke?"
+            │
+            ▼
+    ┌───────────────────┐
+    │ Embed Question    │  ← Gemini Embeddings API
+    │ (512-dim vector)  │
+    └─────────┬─────────┘
+              │
+              ▼
+    ┌───────────────────┐
+    │ Search Vector DB  │  ← ChromaDB semantic search
+    │ (Cosine Similarity)│
+    └─────────┬─────────┘
+              │
+              ▼
+    ┌─────────────────────────────────┐
+    │ Retrieve Top 5 Chunks           │
+    │ ┌─────────────────────────────┐ │
+    │ │ Chunk 1: Mayo Clinic, p.2   │ │
+    │ │ Text: "Sudden numbness..."  │ │
+    │ ├─────────────────────────────┤ │
+    │ │ Chunk 2: WHO, Warning Signs │ │
+    │ │ Text: "Face drooping..."    │ │
+    │ ├─────────────────────────────┤ │
+    │ │ Chunk 3: CDC, Symptoms      │ │
+    │ │ Text: "Speech difficulty...│ │
+    │ └─────────────────────────────┘ │
+    └─────────┬───────────────────────┘
+              │
+              ▼
+    ┌───────────────────┐
+    │ Build Context     │  
+    │ Prompt + Chunks   │
+    └─────────┬─────────┘
+              │
+              ▼
+    ┌───────────────────┐
+    │ Generate Answer   │  ← Gemini 2.0 Flash
+    │ with Citations    │     Temperature: 0.1
+    └─────────┬─────────┘
+              │
+              ▼
+    ┌─────────────────────────────────────┐
+    │ Formatted Response:                 │
+    │                                     │
+    │ "Stroke symptoms include:           │
+    │  • Sudden numbness [1]              │
+    │  • Face drooping [2]                │
+    │  • Difficulty speaking [1][3]       │
+    │                                     │
+    │ Sources:                            │
+    │ [1] Mayo Clinic, Page 2             │
+    │ [2] WHO Warning Signs               │
+    │ [3] CDC Symptom Guide"              │
+    └─────────┬───────────────────────────┘
+              │
+              ▼
+        Save to conversation history
+        Display to user
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      APPOINTMENT BOOKING FLOW                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    Patient: "Book appointment with Dr. Johnson tomorrow at 2pm"
+            │
+            ▼
+    ┌─────────────────────┐
+    │ Parse Request       │  ← Gemini NLU
+    │ Extract:            │
+    │  - Doctor: Johnson  │
+    │  - Date: Oct 28     │
+    │  - Time: 14:00      │
+    └──────────┬──────────┘
+               │
+               ▼
+    ┌──────────────────────┐
+    │ Query Doctor Profile │  ← SQLite
+    │ Get calendar_id      │
+    └──────────┬───────────┘
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Check Doctor's Calendar     │  ← Google Calendar
+    │ via Pipedream MCP           │     (Free/Busy Query)
+    │                             │
+    │ Oct 28 Availability:        │
+    │  ✓ 14:00-14:30 (FREE)       │
+    │  ✗ 15:00-16:00 (BUSY)       │
+    └──────────┬──────────────────┘
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Check Patient's Calendar    │  ← Google Calendar
+    │                             │
+    │ Oct 28 Schedule:            │
+    │  ✓ 14:00-14:30 (FREE)       │
+    └──────────┬──────────────────┘
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Conflict Detection          │
+    │                             │
+    │ Formula:                    │
+    │ (new_start < existing_end)  │
+    │  AND                        │
+    │ (new_end > existing_start)  │
+    │                             │
+    │ Result: NO CONFLICT ✓       │
+    └──────────┬──────────────────┘
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Create Appointment Record   │  ← SQLite INSERT
+    │                             │
+    │ appointment_id: 101         │
+    │ patient_id: 5               │
+    │ doctor_id: 2                │
+    │ date: 2025-10-28            │
+    │ start: 14:00                │
+    │ end: 14:30                  │
+    │ status: PENDING             │
+    │ reason: "Consultation"      │
+    └──────────┬──────────────────┘
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Add to Google Calendar      │  ← Calendar API
+    │                             │
+    │ Event Details:              │
+    │  Title: [PENDING] John Doe  │
+    │  Time: Oct 28, 14:00-14:30  │
+    │  Color: Yellow (pending)    │
+    │  Description:               │
+    │    Patient: John Doe        │
+    │    Reason: Consultation     │
+    │    ID: 101                  │
+    └──────────┬──────────────────┘
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Notify Both Parties         │
+    │                             │
+    │ → Patient:                  │
+    │   "Appointment created!     │
+    │    Awaiting confirmation"   │
+    │                             │
+    │ → Doctor:                   │
+    │   "New booking request:     │
+    │    John Doe, Oct 28, 2pm"   │
+    └──────────┬──────────────────┘
+               │
+               ▼
+    ═══════════════════════════════════
+         DOCTOR CONFIRMATION
+    ═══════════════════════════════════
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Doctor Reviews & Confirms   │
+    │                             │
+    │ Actions Available:          │
+    │  [1] Confirm                │
+    │  [2] Reschedule             │
+    │  [3] Cancel                 │
+    │                             │
+    │ Doctor selects: [1] Confirm │
+    └──────────┬──────────────────┘
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Update Appointment Status   │  ← SQLite UPDATE
+    │ PENDING → CONFIRMED         │
+    └──────────┬──────────────────┘
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Update Calendar Event       │  ← Calendar API
+    │                             │
+    │ Changes:                    │
+    │  Title: John Doe (was [PENDING])│
+    │  Color: Green (was Yellow)  │
+    │  Status: Confirmed          │
+    └──────────┬──────────────────┘
+               │
+               ▼
+    ┌─────────────────────────────┐
+    │ Notify Patient              │
+    │                             │
+    │ "✓ Your appointment with    │
+    │    Dr. Johnson on Oct 28    │
+    │    at 2:00 PM has been      │
+    │    CONFIRMED!"              │
+    └─────────────────────────────┘
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                          STATE MACHINE DIAGRAM                             ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    Appointment Status Flow:
+
+         ┌─────────┐
+         │  START  │
+         └────┬────┘
+              │ Patient books
+              ▼
+      ┌───────────────┐
+      │   PENDING     │ ←──┐ Doctor requests changes
+      └───────┬───────┘    │
+              │            │
+       ┌──────┼──────┬─────┴────┐
+       │      │      │          │
+       │ Confirm  Reschedule  Cancel
+       │      │      │          │
+       ▼      ▼      ▼          ▼
+   ┌─────┐ ┌───────┐        ┌────────┐
+   │CONF │ │PENDING│        │CANCELLED│
+   │IRMED│ │(retry)│        └────────┘
+   └──┬──┘ └───┬───┘
+      │        │
+      │ Patient│Patient
+      │completes misses
+      │        │
+      ▼        ▼
+   ┌──────┐ ┌─────┐
+   │COMPL │ │NO   │
+   │ETED  │ │SHOW │
+   └──────┘ └─────┘
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                          DATABASE RELATIONSHIPS                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    users                    appointments               conversations
+    ┌──────────────┐        ┌────────────────┐         ┌───────────────┐
+    │ user_id (PK) │────┐   │ appointment_id │         │conversation_id│
+    │ external_id  │    │   │ patient_id (FK)│───┐     │ user_id (FK)  │
+    │ role         │    └──→│ doctor_id (FK) │   │     │ message_type  │
+    │ name         │        │ event_id       │   │     │ message       │
+    │ email        │        │ start_time     │   │     │ context       │
+    │ phone        │        │ end_time       │   │     │ timestamp     │
+    │specialization│        │ status         │   │     └───────────────┘
+    └──────────────┘        │ reason         │   │
+                            │ notes          │   │
+                            └────────────────┘   │
+                                                 │
+                                                 └──→ users (patient_id)
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                      MODULE DEPENDENCY GRAPH                               ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+                    healthcare_assistant.py (Main)
+                              │
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
+          ▼                   ▼                   ▼
+    rag_engine.py      scheduler.py      memory_manager.py
+          │                   │                   │
+          │                   └──────┬────────────┘
+          │                          │
+          ▼                          ▼
+    document_processor.py    calendar_assistant.py
+    embeddings.py                   │
+          │                         │
+          └────────┬────────────────┘
+                   │
+                   ▼
+              config.py
+              .env
+
+Dependencies:
+• rag_engine → embeddings, document_processor, config
+• scheduler → calendar_assistant, config
+• memory_manager → config
+• healthcare_assistant → ALL modules
