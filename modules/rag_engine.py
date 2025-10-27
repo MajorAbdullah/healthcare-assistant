@@ -4,12 +4,17 @@ RAG Engine - Handles semantic search and answer generation for medical Q&A
 
 import chromadb
 from chromadb.config import Settings
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 import google.generativeai as genai
+import sys
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utils.embeddings import EmbeddingGenerator
 
 console = Console()
 
@@ -17,7 +22,7 @@ console = Console()
 class RAGEngine:
     """Retrieval-Augmented Generation engine for medical Q&A."""
     
-    def __init__(self, collection_name: str, persist_directory: str, api_key: str, model_name: str):
+    def __init__(self, collection_name: str, persist_directory: str, api_key: str, model_name: str, system_prompt: str = None):
         """
         Initialize the RAG engine.
         
@@ -26,14 +31,19 @@ class RAGEngine:
             persist_directory: Directory to persist the vector database
             api_key: Google API key for Gemini
             model_name: Gemini model name
+            system_prompt: System prompt for answer generation (optional)
         """
         self.collection_name = collection_name
         self.persist_directory = Path(persist_directory)
         self.persist_directory.mkdir(parents=True, exist_ok=True)
+        self.system_prompt = system_prompt or "You are a helpful medical education assistant."
         
         # Initialize Gemini
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model_name)
+        
+        # Initialize embedding generator
+        self.embedding_generator = EmbeddingGenerator(api_key=api_key)
         
         # Initialize ChromaDB
         console.print("🔍 Initializing vector database...", style="cyan")
@@ -52,7 +62,7 @@ class RAGEngine:
             )
             console.print(f"  ✓ Created new collection: {collection_name}", style="green")
     
-    def add_documents(self, chunks: List[Dict]) -> None:
+    def add_documents(self, chunks: List[Dict[str, Any]]) -> None:
         """
         Add document chunks to the vector database.
         
@@ -60,69 +70,82 @@ class RAGEngine:
             chunks: List of document chunks with text and metadata
         """
         if not chunks:
-            console.print("⚠️  No chunks to add", style="yellow")
+            print("⚠️  No chunks to add")
             return
         
-        console.print(f"\n📥 Adding {len(chunks)} chunks to vector database...", style="cyan")
+        print(f"� Processing {len(chunks)} chunks...")
         
-        # Prepare data for ChromaDB
-        ids = []
-        documents = []
-        metadatas = []
+        # Extract texts and prepare data for ChromaDB
+        texts = [chunk['text'] for chunk in chunks]
+        metadatas = [chunk.get('metadata', {}) for chunk in chunks]
+        ids = [f"chunk_{i}_{chunk.get('metadata', {}).get('source', 'unknown')}" 
+               for i, chunk in enumerate(chunks)]
         
-        for chunk in chunks:
-            ids.append(chunk['id'])
-            documents.append(chunk['text'])
-            metadatas.append(chunk.get('metadata', {}))
+        # Generate embeddings using our custom embedding generator
+        print("🔄 Generating embeddings...")
+        embeddings = self.embedding_generator.generate_batch(texts)
         
-        # Add to collection in batches (ChromaDB has size limits)
-        batch_size = 100
-        for i in range(0, len(ids), batch_size):
-            batch_ids = ids[i:i+batch_size]
-            batch_docs = documents[i:i+batch_size]
-            batch_meta = metadatas[i:i+batch_size]
-            
-            self.collection.add(
-                ids=batch_ids,
-                documents=batch_docs,
-                metadatas=batch_meta
-            )
+        if not embeddings:
+            print("❌ Failed to generate embeddings")
+            return
         
-        console.print(f"  ✓ Added {len(chunks)} chunks successfully", style="green")
-        console.print(f"  📊 Total documents in collection: {self.collection.count()}", style="cyan")
+        # Add to ChromaDB
+        print("💾 Storing in vector database...")
+        self.collection.add(
+            documents=texts,
+            embeddings=embeddings,
+            metadatas=metadatas,
+            ids=ids
+        )
+        
+        print(f"✅ Successfully added {len(chunks)} chunks to vector database")
     
-    def search(self, query: str, n_results: int = 5) -> List[Dict]:
+    def search(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
         """
-        Perform semantic search on the vector database.
+        Search for relevant document chunks using semantic similarity.
         
         Args:
-            query: Search query
+            query: The search query
             n_results: Number of results to return
             
         Returns:
-            List of relevant document chunks with metadata
+            List of relevant chunks with metadata and scores
         """
-        if self.collection.count() == 0:
-            console.print("⚠️  No documents in vector database. Please add documents first.", style="yellow")
+        if not query.strip():
+            print("⚠️  Empty query")
             return []
         
-        # Query the collection
-        results = self.collection.query(
-            query_texts=[query],
-            n_results=min(n_results, self.collection.count())
-        )
+        # Generate embedding for the query
+        query_embedding = self.embedding_generator.generate_embedding(query)
         
-        # Format results
-        formatted_results = []
-        if results['documents'] and results['documents'][0]:
-            for i in range(len(results['documents'][0])):
-                formatted_results.append({
-                    'text': results['documents'][0][i],
-                    'metadata': results['metadatas'][0][i] if results['metadatas'] else {},
-                    'distance': results['distances'][0][i] if results['distances'] else None
-                })
+        if not query_embedding:
+            print("❌ Failed to generate query embedding")
+            return []
         
-        return formatted_results
+        # Search in ChromaDB
+        try:
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=n_results
+            )
+            
+            # Format results
+            chunks = []
+            if results and results['documents'] and results['documents'][0]:
+                for i, doc in enumerate(results['documents'][0]):
+                    chunk = {
+                        'text': doc,
+                        'metadata': results['metadatas'][0][i] if results['metadatas'] else {},
+                        'distance': results['distances'][0][i] if results['distances'] else None,
+                        'id': results['ids'][0][i] if results['ids'] else None
+                    }
+                    chunks.append(chunk)
+            
+            return chunks
+            
+        except Exception as e:
+            print(f"❌ Search failed: {e}")
+            return []
     
     def format_context(self, search_results: List[Dict]) -> tuple:
         """
@@ -219,7 +242,7 @@ ANSWER: """
             }
             
         except Exception as e:
-            console.print(f"✗ Error generating answer: {e}", style="red")
+            Console().print(f"✗ Error generating answer: {e}", style="red")
             return {
                 'answer': "I apologize, but I encountered an error generating the answer. Please try again.",
                 'citations': [],
@@ -238,6 +261,8 @@ ANSWER: """
         Returns:
             Dictionary with answer, citations, and metadata
         """
+        console = Console()
+        
         if verbose:
             console.print(f"\n❓ Question: {question}", style="bold cyan")
             console.print("🔍 Searching medical documents...", style="cyan")
@@ -275,6 +300,8 @@ ANSWER: """
         Args:
             result: Result dictionary from query()
         """
+        console = Console()
+        
         # Display answer
         answer_panel = Panel(
             result['answer'],
@@ -292,6 +319,7 @@ ANSWER: """
     
     def clear_collection(self) -> None:
         """Delete all documents from the collection."""
+        console = Console()
         try:
             self.client.delete_collection(name=self.collection_name)
             self.collection = self.client.create_collection(
