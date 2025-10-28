@@ -20,10 +20,11 @@ prompt-toolkit>=3.0.0
 python-dateutil>=2.8.0
 validators>=0.22.0
 
-# Web Framework (for future web UI)
+# Web Framework (Backend API)
 fastapi>=0.104.0
-uvicorn>=0.24.0
+uvicorn[standard]>=0.24.0
 websockets>=12.0
+pydantic[email]>=2.0.0
 
 # Utilities
 requests>=2.31.0

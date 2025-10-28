@@ -27,15 +27,16 @@ def main():
     table.add_column("Description", style="white", width=50)
     table.add_column("File", style="dim", width=30)
     
-    table.add_row("1", "🏥 Launch Healthcare Assistant (MAIN APP)", "healthcare_assistant.py")
-    table.add_row("2", "💬 Medical Q&A Demo", "demo_qa.py")
-    table.add_row("3", "📅 Calendar Integration Demo", "final_demo.py")
-    table.add_row("4", "🧠 Memory Manager Test", "test_memory_manager.py")
-    table.add_row("5", "📆 Interactive Calendar", "calendar_assistant.py")
-    table.add_row("6", "🔍 Test RAG System", "test_rag_complete.py")
-    table.add_row("7", "⚙️  Test Scheduler", "test_scheduler.py")
-    table.add_row("8", "📊 View Database Stats", "(query database)")
-    table.add_row("9", "ℹ️  Show Documentation", "(list docs)")
+    table.add_row("1", "🏥 Patient Portal (MAIN APP)", "healthcare_assistant.py")
+    table.add_row("2", "�‍⚕️ Doctor Portal (NEW!)", "doctor_portal.py")
+    table.add_row("3", "�💬 Medical Q&A Demo", "demo_qa.py")
+    table.add_row("4", "📅 Calendar Integration Demo", "final_demo.py")
+    table.add_row("5", "🧠 Memory Manager Test", "test_memory_manager.py")
+    table.add_row("6", "📆 Interactive Calendar", "calendar_assistant.py")
+    table.add_row("7", "🔍 Test RAG System", "test_rag_complete.py")
+    table.add_row("8", "⚙️  Test Scheduler", "test_scheduler.py")
+    table.add_row("9", "📊 View Database Stats", "(query database)")
+    table.add_row("10", "ℹ️  Show Documentation", "(list docs)")
     table.add_row("0", "🚪 Exit", "")
     
     console.print(table)
@@ -43,41 +44,45 @@ def main():
     
     choice = Prompt.ask(
         "[cyan]Select an option[/cyan]",
-        choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+        choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
         default="1"
     )
     
     console.print()
     
     if choice == "1":
-        console.print("[green]Launching Healthcare Assistant...[/green]\n")
+        console.print("[green]Launching Patient Portal...[/green]\n")
         subprocess.run([sys.executable, "healthcare_assistant.py"])
     
     elif choice == "2":
+        console.print("[green]Launching Doctor Portal...[/green]\n")
+        subprocess.run([sys.executable, "doctor_portal.py"])
+    
+    elif choice == "3":
         console.print("[green]Starting Medical Q&A Demo...[/green]\n")
         subprocess.run([sys.executable, "demo_qa.py"])
     
-    elif choice == "3":
+    elif choice == "4":
         console.print("[green]Running Calendar Integration Demo...[/green]\n")
         subprocess.run([sys.executable, "final_demo.py"])
     
-    elif choice == "4":
+    elif choice == "5":
         console.print("[green]Testing Memory Manager...[/green]\n")
         subprocess.run([sys.executable, "test_memory_manager.py"])
     
-    elif choice == "5":
+    elif choice == "6":
         console.print("[green]Launching Interactive Calendar...[/green]\n")
         subprocess.run([sys.executable, "calendar_assistant.py"])
     
-    elif choice == "6":
+    elif choice == "7":
         console.print("[green]Testing RAG System...[/green]\n")
         subprocess.run([sys.executable, "test_rag_complete.py"])
     
-    elif choice == "7":
+    elif choice == "8":
         console.print("[green]Testing Scheduler...[/green]\n")
         subprocess.run([sys.executable, "test_scheduler.py"])
     
-    elif choice == "8":
+    elif choice == "9":
         console.print("[cyan]Database Statistics:[/cyan]\n")
         subprocess.run([
             "sqlite3", "data/healthcare.db",
@@ -91,7 +96,7 @@ def main():
         ])
         console.print()
     
-    elif choice == "9":
+    elif choice == "10":
         console.print("[cyan]📚 Documentation Files:[/cyan]\n")
         docs = [
             "COMPLETE.md - Final summary",
