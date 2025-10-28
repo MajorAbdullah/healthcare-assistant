@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,79 +17,62 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Calendar, Clock, X, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-
-interface Appointment {
-  id: string;
-  doctorId: number;
-  doctorName: string;
-  specialty: string;
-  date: string;
-  time: string;
-  status: "scheduled" | "completed" | "cancelled";
-  reason?: string;
-}
-
-const mockAppointments: Appointment[] = [
-  {
-    id: "1",
-    doctorId: 1,
-    doctorName: "Dr. Aisha Khan",
-    specialty: "Cardiologist",
-    date: "2025-10-28",
-    time: "11:30 AM",
-    status: "scheduled",
-    reason: "Regular checkup",
-  },
-  {
-    id: "2",
-    doctorId: 2,
-    doctorName: "Dr. James Wilson",
-    specialty: "General Physician",
-    date: "2025-10-15",
-    time: "10:00 AM",
-    status: "completed",
-    reason: "Annual physical examination",
-  },
-  {
-    id: "3",
-    doctorId: 3,
-    doctorName: "Dr. Sarah Chen",
-    specialty: "Pediatrician",
-    date: "2025-09-28",
-    time: "02:30 PM",
-    status: "completed",
-  },
-  {
-    id: "4",
-    doctorId: 4,
-    doctorName: "Dr. Michael Brown",
-    specialty: "Orthopedic",
-    date: "2025-09-10",
-    time: "09:00 AM",
-    status: "cancelled",
-    reason: "Knee pain consultation",
-  },
-];
+import api, { type Appointment } from "@/lib/api";
 
 const PatientAppointments = () => {
   const navigate = useNavigate();
-  const [appointments, setAppointments] = useState(mockAppointments);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [userId, setUserId] = useState<number>(0);
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("user_id");
+    if (!storedUserId) {
+      toast.error("Please login first");
+      navigate("/patient/auth");
+      return;
+    }
+    setUserId(parseInt(storedUserId));
+    loadAppointments(parseInt(storedUserId));
+  }, [navigate]);
+
+  const loadAppointments = async (id: number) => {
+    try {
+      setIsLoading(true);
+      const result = await api.appointment.getByPatient(id, false);
+      if (result.success && result.data) {
+        setAppointments(Array.isArray(result.data) ? result.data : []);
+      } else {
+        toast.error("Failed to load appointments");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load appointments");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCancelClick = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setCancelDialogOpen(true);
   };
 
-  const handleCancelConfirm = () => {
-    if (selectedAppointment) {
-      setAppointments(
-        appointments.map((apt) =>
-          apt.id === selectedAppointment.id ? { ...apt, status: "cancelled" as const } : apt
-        )
-      );
-      toast.success("Appointment cancelled successfully");
+  const handleCancelConfirm = async () => {
+    if (!selectedAppointment) return;
+
+    try {
+      const result = await api.appointment.cancel(selectedAppointment.appointment_id);
+      if (result.success) {
+        toast.success("Appointment cancelled successfully");
+        loadAppointments(userId); // Reload appointments
+      } else {
+        toast.error(result.message || "Failed to cancel appointment");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to cancel appointment");
+    } finally {
       setCancelDialogOpen(false);
       setSelectedAppointment(null);
     }
@@ -105,94 +88,98 @@ const PatientAppointments = () => {
     return appointments.filter((apt) => apt.status === status);
   };
 
-  const AppointmentCard = ({ appointment }: { appointment: Appointment }) => (
-    <Card className="glass-card hover:shadow-lg transition-all duration-300">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <Avatar className="w-14 h-14 border-2 border-white">
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {appointment.doctorName.split(" ")[1][0]}
-                {appointment.doctorName.split(" ")[2]?.[0] || ""}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-lg">{appointment.doctorName}</CardTitle>
-              <CardDescription>{appointment.specialty}</CardDescription>
+  const AppointmentCard = ({ appointment }: { appointment: Appointment }) => {
+    const doctorName = appointment.doctor_name || "Unknown Doctor";
+    const doctorInitials = doctorName.split(" ").map(n => n[0]).join("");
+    
+    return (
+      <Card className="glass-card hover:shadow-lg transition-all duration-300">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="w-14 h-14 border-2 border-white">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {doctorInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <CardTitle className="text-lg">{doctorName}</CardTitle>
+                <CardDescription>{appointment.doctor_specialty || "General"}</CardDescription>
+              </div>
+            </div>
+            <Badge
+              variant={
+                appointment.status === "scheduled"
+                  ? "default"
+                  : appointment.status === "completed"
+                  ? "secondary"
+                  : "destructive"
+              }
+              className={
+                appointment.status === "completed"
+                  ? "bg-success text-success-foreground"
+                  : ""
+              }
+            >
+              {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="w-4 h-4" />
+              <span>
+                {new Date(appointment.appointment_date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="w-4 h-4" />
+              <span>{appointment.start_time}</span>
             </div>
           </div>
-          <Badge
-            variant={
-              appointment.status === "scheduled"
-                ? "default"
-                : appointment.status === "completed"
-                ? "secondary"
-                : "destructive"
-            }
-            className={
-              appointment.status === "completed"
-                ? "bg-success text-success-foreground"
-                : ""
-            }
-          >
-            {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="w-4 h-4" />
-            <span>
-              {new Date(appointment.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="w-4 h-4" />
-            <span>{appointment.time}</span>
-          </div>
-        </div>
-        {appointment.reason && (
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Reason: </span>
-              {appointment.reason}
-            </p>
-          </div>
-        )}
-        <div className="flex gap-2">
-          {appointment.status === "scheduled" && (
-            <>
-              <Button variant="outline" className="flex-1">
-                View Details
-              </Button>
+          {appointment.reason && (
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Reason: </span>
+                {appointment.reason}
+              </p>
+            </div>
+          )}
+          <div className="flex gap-2">
+            {appointment.status === "scheduled" && (
+              <>
+                <Button variant="outline" className="flex-1">
+                  View Details
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  onClick={() => handleCancelClick(appointment)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            {(appointment.status === "completed" || appointment.status === "cancelled") && (
               <Button
-                variant="destructive"
-                size="icon"
-                onClick={() => handleCancelClick(appointment)}
+                variant="outline"
+                className="flex-1 gap-2"
+                onClick={() => handleBookAgain(appointment)}
               >
-                <X className="h-4 w-4" />
+                <RotateCcw className="h-4 w-4" />
+                Book Again
               </Button>
-            </>
-          )}
-          {(appointment.status === "completed" || appointment.status === "cancelled") && (
-            <Button
-              variant="outline"
-              className="flex-1 gap-2"
-              onClick={() => handleBookAgain(appointment)}
-            >
-              <RotateCcw className="h-4 w-4" />
-              Book Again
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -218,10 +205,14 @@ const PatientAppointments = () => {
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
-            {filterAppointments().length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : filterAppointments().length > 0 ? (
               <div className="grid md:grid-cols-2 gap-6">
                 {filterAppointments().map((appointment) => (
-                  <AppointmentCard key={appointment.id} appointment={appointment} />
+                  <AppointmentCard key={appointment.appointment_id} appointment={appointment} />
                 ))}
               </div>
             ) : (
@@ -230,10 +221,14 @@ const PatientAppointments = () => {
           </TabsContent>
 
           <TabsContent value="upcoming" className="space-y-4">
-            {filterAppointments("scheduled").length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : filterAppointments("scheduled").length > 0 ? (
               <div className="grid md:grid-cols-2 gap-6">
                 {filterAppointments("scheduled").map((appointment) => (
-                  <AppointmentCard key={appointment.id} appointment={appointment} />
+                  <AppointmentCard key={appointment.appointment_id} appointment={appointment} />
                 ))}
               </div>
             ) : (
@@ -242,10 +237,14 @@ const PatientAppointments = () => {
           </TabsContent>
 
           <TabsContent value="past" className="space-y-4">
-            {filterAppointments("completed").length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : filterAppointments("completed").length > 0 ? (
               <div className="grid md:grid-cols-2 gap-6">
                 {filterAppointments("completed").map((appointment) => (
-                  <AppointmentCard key={appointment.id} appointment={appointment} />
+                  <AppointmentCard key={appointment.appointment_id} appointment={appointment} />
                 ))}
               </div>
             ) : (
@@ -254,10 +253,14 @@ const PatientAppointments = () => {
           </TabsContent>
 
           <TabsContent value="cancelled" className="space-y-4">
-            {filterAppointments("cancelled").length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : filterAppointments("cancelled").length > 0 ? (
               <div className="grid md:grid-cols-2 gap-6">
                 {filterAppointments("cancelled").map((appointment) => (
-                  <AppointmentCard key={appointment.id} appointment={appointment} />
+                  <AppointmentCard key={appointment.appointment_id} appointment={appointment} />
                 ))}
               </div>
             ) : (
@@ -274,14 +277,14 @@ const PatientAppointments = () => {
             <AlertDialogTitle>Cancel Appointment?</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to cancel your appointment with{" "}
-              {selectedAppointment?.doctorName} on{" "}
+              {selectedAppointment?.doctor_name || "the doctor"} on{" "}
               {selectedAppointment &&
-                new Date(selectedAppointment.date).toLocaleDateString("en-US", {
+                new Date(selectedAppointment.appointment_date).toLocaleDateString("en-US", {
                   month: "long",
                   day: "numeric",
                   year: "numeric",
                 })}{" "}
-              at {selectedAppointment?.time}? This action cannot be undone.
+              at {selectedAppointment?.start_time}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

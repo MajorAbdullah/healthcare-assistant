@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,45 +9,120 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Star, CheckCircle2, Calendar as CalendarIcon } from "lucide-react";
-
-const doctors = [
-  { id: 1, name: "Dr. Aisha Khan", specialty: "Cardiologist", rating: 4.9 },
-  { id: 2, name: "Dr. James Wilson", specialty: "General Physician", rating: 4.8 },
-  { id: 3, name: "Dr. Sarah Chen", specialty: "Pediatrician", rating: 4.7 },
-  { id: 4, name: "Dr. Michael Brown", specialty: "Orthopedic", rating: 4.9 },
-  { id: 5, name: "Dr. Emily Davis", specialty: "Dermatologist", rating: 4.6 },
-  { id: 6, name: "Dr. Robert Taylor", specialty: "Neurologist", rating: 4.8 },
-];
+import api, { type Doctor, type TimeSlot } from "@/lib/api";
 
 const BookAppointment = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [selectedDoctor, setSelectedDoctor] = useState<typeof doctors[0] | null>(null);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState("");
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [reason, setReason] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<number>(0);
 
-  const timeSlots = [
-    "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-    "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
-  ];
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("user_id");
+    if (!storedUserId) {
+      toast.error("Please login first");
+      navigate("/patient/auth");
+      return;
+    }
+    setUserId(parseInt(storedUserId));
+    loadDoctors();
+  }, [navigate]);
 
-  const handleDoctorSelect = (doctor: typeof doctors[0]) => {
+  const loadDoctors = async () => {
+    try {
+      setIsLoading(true);
+      const result = await api.doctor.getAll();
+      if (result.success && result.data) {
+        setDoctors(Array.isArray(result.data) ? result.data : []);
+      } else {
+        toast.error("Failed to load doctors");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load doctors");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadAvailability = async (doctorId: number, date: string) => {
+    try {
+      setIsLoading(true);
+      const result = await api.doctor.getAvailability(doctorId, date);
+      if (result.success && result.data) {
+        // API returns { available_slots: ["09:00", "09:30", ...] }
+        const slots = result.data.available_slots || [];
+        // Convert strings to TimeSlot objects
+        const timeSlots: TimeSlot[] = (slots as any[]).map((time: any) => ({ 
+          start_time: typeof time === 'string' ? time : time.start_time, 
+          end_time: "", 
+          duration: 30 
+        }));
+        setAvailableSlots(timeSlots);
+      } else {
+        toast.error("No available slots for this date");
+        setAvailableSlots([]);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load availability");
+      setAvailableSlots([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDoctorSelect = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
     setStep(2);
   };
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
+    if (date && selectedDoctor) {
+      const dateStr = date.toISOString().split('T')[0];
+      loadAvailability(selectedDoctor.doctor_id, dateStr);
+    }
   };
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
   };
 
-  const handleConfirm = () => {
-    toast.success("Appointment booked successfully!");
-    setStep(5);
+  const handleConfirm = async () => {
+    if (!selectedDoctor || !selectedDate || !selectedTime || !userId) {
+      toast.error("Please complete all fields");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      
+      const result = await api.appointment.book({
+        user_id: userId,
+        doctor_id: selectedDoctor.doctor_id,
+        date: dateStr,
+        time: selectedTime,
+        reason: reason || "General consultation",
+        sync_calendar: false
+      });
+
+      if (result.success) {
+        toast.success("Appointment booked successfully!");
+        setStep(5);
+      } else {
+        toast.error(result.message || "Failed to book appointment");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to book appointment");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -93,7 +168,7 @@ const BookAppointment = () => {
             <div className="grid md:grid-cols-3 gap-6">
               {doctors.map((doctor) => (
                 <Card 
-                  key={doctor.id}
+                  key={doctor.doctor_id}
                   className="glass-card cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                   onClick={() => handleDoctorSelect(doctor)}
                 >
@@ -170,37 +245,29 @@ const BookAppointment = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-3">Morning</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    {timeSlots.slice(0, 6).map((time) => (
-                      <Button
-                        key={time}
-                        variant={selectedTime === time ? "default" : "outline"}
-                        onClick={() => handleTimeSelect(time)}
-                        className="w-full"
-                      >
-                        {time}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold mb-3">Afternoon</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    {timeSlots.slice(6).map((time) => (
-                      <Button
-                        key={time}
-                        variant={selectedTime === time ? "default" : "outline"}
-                        onClick={() => handleTimeSelect(time)}
-                        className="w-full"
-                      >
-                        {time}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+                {isLoading ? (
+                  <p className="text-center text-muted-foreground py-8">Loading available slots...</p>
+                ) : availableSlots.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No available slots for this date. Please select another date.</p>
+                ) : (
+                  <>
+                    <div>
+                      <h4 className="font-semibold mb-3">Available Time Slots</h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        {availableSlots.map((slot, index) => (
+                          <Button
+                            key={index}
+                            variant={selectedTime === slot.start_time ? "default" : "outline"}
+                            onClick={() => handleTimeSelect(slot.start_time)}
+                            className="w-full"
+                          >
+                            {slot.start_time}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 

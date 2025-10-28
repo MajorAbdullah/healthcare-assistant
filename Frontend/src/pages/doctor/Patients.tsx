@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Filter, LogOut, User, Mail, Phone, Calendar, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,34 +6,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface Patient {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  totalVisits: number;
-  lastVisit: string;
-  status: "active" | "inactive";
-}
+import { toast } from "sonner";
+import api, { type Patient } from "@/lib/api";
 
 const PatientsDirectory = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [isLoading, setIsLoading] = useState(false);
+  const [allPatients, setAllPatients] = useState<Patient[]>([]);
+  const [doctorId, setDoctorId] = useState<number>(0);
 
-  const doctorName = localStorage.getItem("doctorName") || "Doctor";
+  const doctorName = localStorage.getItem("doctor_name") || "Doctor";
 
-  // Mock patients data
-  const allPatients: Patient[] = [
-    { id: 1, name: "Sarah Johnson", email: "sarah.j@email.com", phone: "+1 234-567-8901", totalVisits: 12, lastVisit: "2025-10-20", status: "active" },
-    { id: 2, name: "Michael Chen", email: "m.chen@email.com", phone: "+1 234-567-8902", totalVisits: 8, lastVisit: "2025-10-18", status: "active" },
-    { id: 3, name: "Emily Davis", email: "emily.d@email.com", phone: "+1 234-567-8903", totalVisits: 15, lastVisit: "2025-10-25", status: "active" },
-    { id: 4, name: "James Wilson", email: "j.wilson@email.com", phone: "+1 234-567-8904", totalVisits: 5, lastVisit: "2025-09-15", status: "inactive" },
-    { id: 5, name: "Lisa Anderson", email: "lisa.a@email.com", phone: "+1 234-567-8905", totalVisits: 20, lastVisit: "2025-10-22", status: "active" },
-    { id: 6, name: "Robert Taylor", email: "r.taylor@email.com", phone: "+1 234-567-8906", totalVisits: 3, lastVisit: "2025-08-10", status: "inactive" },
-  ];
+  useEffect(() => {
+    const id = localStorage.getItem("doctor_id");
+    if (!id) {
+      toast.error("Please login first");
+      navigate("/doctor/auth");
+      return;
+    }
+    setDoctorId(parseInt(id));
+    loadPatients(parseInt(id));
+  }, [navigate]);
+
+  const loadPatients = async (id: number) => {
+    try {
+      setIsLoading(true);
+      const result = await api.doctor.getPatients(id);
+      if (result.success && result.data) {
+        setAllPatients(result.data.patients);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load patients");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -48,19 +58,14 @@ const PatientsDirectory = () => {
   const filteredPatients = allPatients
     .filter(patient => {
       const matchesSearch = patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           patient.phone.includes(searchQuery);
-      const matchesStatus = filterStatus === "all" || patient.status === filterStatus;
-      return matchesSearch && matchesStatus;
+                           (patient.email?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+                           (patient.phone || "").includes(searchQuery);
+      return matchesSearch;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case "name":
           return a.name.localeCompare(b.name);
-        case "visits":
-          return b.totalVisits - a.totalVisits;
-        case "lastVisit":
-          return new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime();
         default:
           return 0;
       }
@@ -132,59 +137,61 @@ const PatientsDirectory = () => {
         </Card>
 
         {/* Patients Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPatients.map((patient) => (
-            <Card
-              key={patient.id}
-              className="glass-card shadow-card hover:shadow-card-hover transition-all duration-300 border-white/20 hover:scale-[1.02] cursor-pointer"
-              onClick={() => navigate(`/doctor/patients/${patient.id}`)}
-            >
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {getInitials(patient.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{patient.name}</CardTitle>
-                    <p className={`text-sm ${patient.status === "active" ? "text-success" : "text-muted-foreground"}`}>
-                      {patient.status === "active" ? "Active" : "Inactive"}
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span className="truncate">{patient.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span>{patient.phone}</span>
-                  </div>
-                  <div className="flex items-center justify-between pt-3 border-t border-white/20">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-primary">{patient.totalVisits}</p>
-                      <p className="text-xs text-muted-foreground">Total Visits</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-medium">{new Date(patient.lastVisit).toLocaleDateString()}</p>
-                      <p className="text-xs text-muted-foreground">Last Visit</p>
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredPatients.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPatients.map((patient) => (
+              <Card
+                key={patient.user_id}
+                className="glass-card shadow-card hover:shadow-card-hover transition-all duration-300 border-white/20 hover:scale-[1.02] cursor-pointer"
+                onClick={() => navigate(`/doctor/patients/${patient.user_id}`)}
+              >
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {getInitials(patient.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{patient.name}</CardTitle>
+                      <p className="text-sm text-success">Active</p>
                     </div>
                   </div>
-                  <Button className="w-full mt-4 hover:scale-105 transition-transform" size="sm">
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Details
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredPatients.length === 0 && (
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Mail className="h-4 w-4" />
+                      <span className="truncate">{patient.email || "N/A"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Phone className="h-4 w-4" />
+                      <span>{patient.phone || "N/A"}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-white/20">
+                      <div className="text-center">
+                        <p className="text-sm font-medium">{patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : "N/A"}</p>
+                        <p className="text-xs text-muted-foreground">Date of Birth</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium capitalize">{patient.gender || "N/A"}</p>
+                        <p className="text-xs text-muted-foreground">Gender</p>
+                      </div>
+                    </div>
+                    <Button className="w-full mt-4 hover:scale-105 transition-transform" size="sm">
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Details
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
           <Card className="glass-card shadow-card border-white/20">
             <CardContent className="py-12 text-center">
               <User className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />

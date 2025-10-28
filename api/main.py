@@ -35,8 +35,12 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",  # Next.js default
         "http://localhost:5173",  # Vite default
+        "http://localhost:8080",  # Vite alternative port
+        "http://localhost:8081",  # Vite alternative port 2
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
+        "http://127.0.0.1:8080",
+        "http://127.0.0.1:8081",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -57,16 +61,29 @@ def get_rag_engine():
     global rag_engine
     if rag_engine is None:
         try:
+            # Import config for API key and settings
+            import sys
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from config import GOOGLE_API_KEY, LLM_MODEL, CHROMA_COLLECTION_NAME, VECTOR_DB_DIR, RAG_SYSTEM_PROMPT
+            
+            if not GOOGLE_API_KEY:
+                print("Warning: GOOGLE_API_KEY not set in environment")
+                return None
+            
             # Use the same vector DB path as the main app
-            vector_db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'vector_db')
             rag_engine = RAGEngine(
-                collection_name="medical_knowledge",
-                persist_directory=vector_db_path,
-                api_key=None,
-                model_name="gpt-3.5-turbo"
+                collection_name=CHROMA_COLLECTION_NAME,
+                persist_directory=str(VECTOR_DB_DIR),
+                api_key=GOOGLE_API_KEY,
+                model_name=LLM_MODEL,
+                system_prompt=RAG_SYSTEM_PROMPT
             )
+            print(f"✓ RAG Engine initialized with {rag_engine.collection.count()} documents")
         except Exception as e:
             print(f"Warning: RAG engine not initialized - {e}")
+            import traceback
+            traceback.print_exc()
+            return None
     return rag_engine
 
 
@@ -554,41 +571,40 @@ async def chat_with_ai(message: ChatMessage):
         rag = get_rag_engine()
         
         if not rag:
-            raise HTTPException(status_code=503, detail="AI assistant not available")
+            raise HTTPException(status_code=503, detail="AI assistant not available. Please configure GOOGLE_API_KEY.")
         
-        # Get conversation context
-        context = memory_manager.get_user_context(message.user_id)
-        
-        # Get AI response
-        response = rag.answer_question(
-            question=message.message,
-            context=context
-        )
-        
-        # Save conversation
-        memory_manager.add_conversation(
+        # Save user message
+        memory_manager.save_conversation(
             user_id=message.user_id,
             role="user",
             message=message.message
         )
         
-        memory_manager.add_conversation(
+        # Get AI response using RAG query method
+        result = rag.query(message.message, n_results=5, verbose=False)
+        response_text = result.get('answer', 'I apologize, but I encountered an error.')
+        
+        # Save assistant response
+        memory_manager.save_conversation(
             user_id=message.user_id,
             role="assistant",
-            message=response
+            message=response_text
         )
         
         return {
             "success": True,
             "data": {
-                "response": response,
+                "answer": response_text,
+                "citations": result.get('citations', []),
                 "timestamp": datetime.now().isoformat()
             }
         }
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
 
 
 @app.get("/api/v1/patients/{user_id}/preferences")
@@ -1128,7 +1144,7 @@ async def websocket_chat(websocket: WebSocket, user_id: int):
         
         if not rag:
             await websocket.send_json({
-                "error": "AI assistant not available",
+                "error": "AI assistant not available. Please configure GOOGLE_API_KEY.",
                 "timestamp": datetime.now().isoformat()
             })
             await websocket.close()
@@ -1143,31 +1159,28 @@ async def websocket_chat(websocket: WebSocket, user_id: int):
             if not user_message:
                 continue
             
-            # Get conversation context
-            context = memory_manager.get_user_context(user_id)
-            
-            # Get AI response
-            response = rag.answer_question(
-                question=user_message,
-                context=context
-            )
-            
-            # Save conversation
-            memory_manager.add_conversation(
+            # Save user message
+            memory_manager.save_conversation(
                 user_id=user_id,
                 role="user",
                 message=user_message
             )
             
-            memory_manager.add_conversation(
+            # Get AI response using RAG query method
+            result = rag.query(user_message, n_results=5, verbose=False)
+            response_text = result.get('answer', 'I apologize, but I encountered an error.')
+            
+            # Save assistant response
+            memory_manager.save_conversation(
                 user_id=user_id,
                 role="assistant",
-                message=response
+                message=response_text
             )
             
             # Send response back to client
             await websocket.send_json({
-                "content": response,
+                "content": response_text,
+                "citations": result.get('citations', []),
                 "timestamp": datetime.now().isoformat()
             })
             
@@ -1175,6 +1188,15 @@ async def websocket_chat(websocket: WebSocket, user_id: int):
         print(f"WebSocket disconnected for user {user_id}")
     except Exception as e:
         print(f"WebSocket error: {e}")
+        import traceback
+        traceback.print_exc()
+        try:
+            await websocket.send_json({
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            })
+        except:
+            pass
         await websocket.close()
 
 

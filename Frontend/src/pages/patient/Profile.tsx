@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,37 +21,144 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import api from "@/lib/api";
 
 const PatientProfile = () => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<number>(0);
   
   // Profile data
-  const [name, setName] = useState("John Doe");
-  const [email, setEmail] = useState("john.doe@example.com");
-  const [phone, setPhone] = useState("1234567890");
-  const [dob, setDob] = useState("1990-01-15");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [dob, setDob] = useState("");
   const [gender, setGender] = useState("male");
   
   // Preferences
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsReminders, setSmsReminders] = useState(true);
   const [autoSyncCalendar, setAutoSyncCalendar] = useState(false);
+  
+  // Stats
+  const [totalAppointments, setTotalAppointments] = useState(0);
+  const [upcomingCount, setUpcomingCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
 
-  const handleSave = () => {
-    toast.success("Profile updated successfully");
-    setIsEditing(false);
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("user_id");
+    if (!storedUserId) {
+      toast.error("Please login first");
+      navigate("/patient/auth");
+      return;
+    }
+    const id = parseInt(storedUserId);
+    setUserId(id);
+    loadProfile(id);
+    loadPreferences(id);
+    loadAppointmentStats(id);
+  }, [navigate]);
+
+  const loadProfile = async (id: number) => {
+    try {
+      const result = await api.patient.getProfile(id);
+      if (result.success && result.data) {
+        setName(result.data.name);
+        setEmail(result.data.email || "");
+        setPhone(result.data.phone || "");
+        setDob(result.data.date_of_birth || "");
+        setGender(result.data.gender || "male");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load profile");
+    }
+  };
+
+  const loadPreferences = async (id: number) => {
+    try {
+      const result = await api.patient.getPreferences(id);
+      if (result.success && result.data) {
+        const prefs = result.data.preferences;
+        setEmailNotifications(prefs.email_notifications ?? true);
+        setSmsReminders(prefs.sms_reminders ?? true);
+        setAutoSyncCalendar(prefs.auto_sync_calendar ?? false);
+      }
+    } catch (error: any) {
+      // Preferences might not exist yet, that's okay
+      console.log("No preferences found, using defaults");
+    }
+  };
+
+  const loadAppointmentStats = async (id: number) => {
+    try {
+      const result = await api.appointment.getByPatient(id, false);
+      if (result.success && result.data) {
+        const appointments = result.data.appointments;
+        setTotalAppointments(appointments.length);
+        setUpcomingCount(appointments.filter(a => a.status === "scheduled").length);
+        setCompletedCount(appointments.filter(a => a.status === "completed").length);
+      }
+    } catch (error: any) {
+      console.log("Failed to load appointment stats");
+    }
+  };
+
+  const handleSave = async () => {
+    if (!userId) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Update profile
+      const profileResult = await api.patient.updateProfile(userId, {
+        name,
+        email,
+        phone,
+        date_of_birth: dob,
+        gender: gender as "male" | "female" | "other"
+      });
+
+      // Update preferences
+      const prefsResult = await api.patient.updatePreferences(userId, {
+        email_notifications: emailNotifications,
+        sms_reminders: smsReminders,
+        auto_sync_calendar: autoSyncCalendar
+      });
+
+      if (profileResult.success && prefsResult.success) {
+        toast.success("Profile updated successfully");
+        setIsEditing(false);
+        
+        // Update localStorage if email changed
+        if (email) {
+          localStorage.setItem("user_email", email);
+        }
+        if (name) {
+          localStorage.setItem("user_name", name);
+        }
+      } else {
+        toast.error("Failed to update profile");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update profile");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
+    // Reload profile to reset changes
+    loadProfile(userId);
+    loadPreferences(userId);
     toast.info("Changes discarded");
     setIsEditing(false);
   };
 
   const stats = [
-    { label: "Total Appointments", value: "12", icon: CalendarIcon },
-    { label: "Upcoming", value: "2", icon: Calendar },
-    { label: "Completed", value: "10", icon: Calendar },
+    { label: "Total Appointments", value: String(totalAppointments), icon: CalendarIcon },
+    { label: "Upcoming", value: String(upcomingCount), icon: Calendar },
+    { label: "Completed", value: String(completedCount), icon: Calendar },
   ];
 
   return (

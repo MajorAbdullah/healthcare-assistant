@@ -1,26 +1,50 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, TrendingUp, Users, Calendar as CalendarIcon, CheckCircle, BarChart3, Download } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { toast } from "sonner";
+import api, { type Analytics as AnalyticsData } from "@/lib/api";
 
 const Analytics = () => {
   const navigate = useNavigate();
   const [dateRange, setDateRange] = useState("30");
+  const [isLoading, setIsLoading] = useState(false);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [doctorId, setDoctorId] = useState<number>(0);
 
-  const doctorName = localStorage.getItem("doctorName") || "Doctor";
+  const doctorName = localStorage.getItem("doctor_name") || "Doctor";
 
-  // Mock data for charts
-  const appointmentTrends = [
-    { date: "Oct 1", scheduled: 12, completed: 10 },
-    { date: "Oct 8", scheduled: 15, completed: 14 },
-    { date: "Oct 15", scheduled: 18, completed: 16 },
-    { date: "Oct 22", scheduled: 14, completed: 13 },
-    { date: "Oct 29", scheduled: 20, completed: 18 },
-  ];
+  useEffect(() => {
+    const id = localStorage.getItem("doctor_id");
+    if (!id) {
+      toast.error("Please login first");
+      navigate("/doctor/auth");
+      return;
+    }
+    setDoctorId(parseInt(id));
+    loadAnalytics(parseInt(id));
+  }, [navigate, dateRange]);
 
+  const loadAnalytics = async (id: number) => {
+    try {
+      setIsLoading(true);
+      const result = await api.doctor.getAnalytics(id);
+      if (result.success && result.data) {
+        setAnalytics(result.data);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load analytics");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Mock data for charts (can be replaced with real API data when available)
+  const appointmentTrends = analytics?.monthly_data || [];
+  
   const completionRate = [
     { name: "Completed", value: 95, color: "hsl(var(--success))" },
     { name: "Cancelled", value: 3, color: "hsl(var(--destructive))" },
@@ -37,17 +61,12 @@ const Analytics = () => {
     { day: "Sun", count: 5 },
   ];
 
-  const patientGrowth = [
-    { month: "Jul", patients: 95 },
-    { month: "Aug", patients: 105 },
-    { month: "Sep", patients: 115 },
-    { month: "Oct", patients: 127 },
-  ];
+  const patientGrowth = analytics?.monthly_data || [];
 
   const stats = [
     { 
       label: "Total Appointments", 
-      value: "234", 
+      value: String(analytics?.total_appointments || 0), 
       change: "+12%", 
       icon: CalendarIcon, 
       color: "text-primary",
@@ -55,7 +74,7 @@ const Analytics = () => {
     },
     { 
       label: "Total Patients", 
-      value: "127", 
+      value: String(analytics?.new_patients || 0), 
       change: "+8%", 
       icon: Users, 
       color: "text-secondary",

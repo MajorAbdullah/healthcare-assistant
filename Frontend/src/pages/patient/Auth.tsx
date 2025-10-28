@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Heart, UserPlus, LogIn } from "lucide-react";
+import api from "@/lib/api";
 
 const PatientAuth = () => {
   const navigate = useNavigate();
@@ -35,15 +36,27 @@ const PatientAuth = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      localStorage.setItem("user_type", "patient");
-      localStorage.setItem("user_id", "1");
-      localStorage.setItem("user_name", "John Doe");
-      toast.success("Welcome back!");
-      navigate("/patient/dashboard");
+    try {
+      const result = await api.patient.login({
+        email: loginEmail,
+        phone: loginPhone,
+      });
+
+      if (result.success && result.data) {
+        localStorage.setItem("user_type", "patient");
+        localStorage.setItem("user_id", result.data.user_id.toString());
+        localStorage.setItem("user_name", result.data.name);
+        localStorage.setItem("user_email", result.data.email);
+        toast.success(`Welcome back, ${result.data.name}!`);
+        navigate("/patient/dashboard");
+      } else {
+        toast.error(result.message || "Login failed");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Login failed. Please try again.");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -57,15 +70,30 @@ const PatientAuth = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      localStorage.setItem("user_type", "patient");
-      localStorage.setItem("user_id", "1");
-      localStorage.setItem("user_name", registerName);
-      toast.success("Registration successful! Welcome!");
-      navigate("/patient/dashboard");
+    try {
+      const result = await api.patient.register({
+        name: registerName,
+        email: registerEmail,
+        phone: registerPhone,
+        dob: registerDob,
+        gender: registerGender,
+      });
+
+      if (result.success && result.data) {
+        localStorage.setItem("user_type", "patient");
+        localStorage.setItem("user_id", result.data.user_id.toString());
+        localStorage.setItem("user_name", result.data.name);
+        localStorage.setItem("user_email", registerEmail);
+        toast.success(`Welcome, ${result.data.name}! Registration successful!`);
+        navigate("/patient/dashboard");
+      } else {
+        toast.error(result.message || "Registration failed");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Registration failed. Please try again.");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

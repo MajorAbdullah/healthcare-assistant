@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, LogOut, Mail, Phone, Calendar, User, FileText, Edit, Save, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,71 +8,59 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-
-interface AppointmentHistory {
-  id: number;
-  date: string;
-  time: string;
-  status: "completed" | "cancelled" | "scheduled";
-  reason: string;
-  notes: string;
-}
+import api, { type Patient, type Appointment } from "@/lib/api";
 
 const PatientDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [editingNote, setEditingNote] = useState<number | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [doctorId, setDoctorId] = useState<number>(0);
 
-  const doctorName = localStorage.getItem("doctorName") || "Doctor";
+  const doctorName = localStorage.getItem("doctor_name") || "Doctor";
 
-  // Mock patient data
-  const patient = {
-    id: Number(id),
-    name: "Sarah Johnson",
-    email: "sarah.j@email.com",
-    phone: "+1 234-567-8901",
-    age: 32,
-    gender: "Female",
-    totalVisits: 12,
-    memberSince: "2024-01-15",
+  useEffect(() => {
+    const docId = localStorage.getItem("doctor_id");
+    if (!docId) {
+      toast.error("Please login first");
+      navigate("/doctor/auth");
+      return;
+    }
+    if (!id) {
+      toast.error("Invalid patient ID");
+      navigate("/doctor/patients");
+      return;
+    }
+    
+    setDoctorId(parseInt(docId));
+    loadPatientData(parseInt(id), parseInt(docId));
+  }, [id, navigate]);
+
+  const loadPatientData = async (patientId: number, docId: number) => {
+    try {
+      setIsLoading(true);
+      
+      // Load patient profile
+      const profileResult = await api.patient.getProfile(patientId);
+      if (profileResult.success && profileResult.data) {
+        setPatient(profileResult.data);
+      }
+      
+      // Load appointment history
+      const historyResult = await api.appointment.getPatientHistory(patientId);
+      if (historyResult.success && historyResult.data) {
+        setAppointments(Array.isArray(historyResult.data.appointments) ? historyResult.data.appointments : []);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load patient data");
+      setAppointments([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  // Mock appointment history
-  const [appointments, setAppointments] = useState<AppointmentHistory[]>([
-    {
-      id: 1,
-      date: "2025-10-20",
-      time: "09:00 AM",
-      status: "completed",
-      reason: "Regular checkup",
-      notes: "Blood pressure normal. Patient reported improved sleep quality. Continue current medication.",
-    },
-    {
-      id: 2,
-      date: "2025-09-15",
-      time: "10:30 AM",
-      status: "completed",
-      reason: "Follow-up consultation",
-      notes: "Discussed test results. All parameters within normal range. Advised to maintain healthy diet.",
-    },
-    {
-      id: 3,
-      date: "2025-08-10",
-      time: "02:00 PM",
-      status: "completed",
-      reason: "Annual physical",
-      notes: "Complete physical examination conducted. No abnormalities detected. Recommended yearly follow-up.",
-    },
-    {
-      id: 4,
-      date: "2025-11-05",
-      time: "11:00 AM",
-      status: "scheduled",
-      reason: "Vaccination",
-      notes: "",
-    },
-  ]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -97,13 +85,23 @@ const PatientDetail = () => {
     setNoteText(currentNote);
   };
 
-  const handleSaveNote = (appointmentId: number) => {
-    setAppointments(appointments.map(apt =>
-      apt.id === appointmentId ? { ...apt, notes: noteText } : apt
-    ));
-    setEditingNote(null);
-    setNoteText("");
-    toast.success("Notes saved successfully");
+  const handleSaveNote = async (appointmentId: number) => {
+    try {
+      const result = await api.appointment.updateNotes(appointmentId, noteText);
+      if (result.success) {
+        // Reload patient data to refresh appointments
+        if (patient) {
+          loadPatientData(patient.user_id, doctorId);
+        }
+        setEditingNote(null);
+        setNoteText("");
+        toast.success("Notes saved successfully");
+      } else {
+        toast.error(result.message || "Failed to save notes");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save notes");
+    }
   };
 
   const handleCancelEdit = () => {
@@ -112,11 +110,27 @@ const PatientDetail = () => {
   };
 
   const stats = [
-    { label: "Total Visits", value: patient.totalVisits, color: "text-primary" },
-    { label: "Completed", value: appointments.filter(a => a.status === "completed").length, color: "text-success" },
-    { label: "Upcoming", value: appointments.filter(a => a.status === "scheduled").length, color: "text-warning" },
-    { label: "Cancelled", value: appointments.filter(a => a.status === "cancelled").length, color: "text-destructive" },
+    { label: "Total Visits", value: Array.isArray(appointments) ? appointments.length : 0, color: "text-primary" },
+    { label: "Completed", value: Array.isArray(appointments) ? appointments.filter(a => a.status === "completed").length : 0, color: "text-success" },
+    { label: "Upcoming", value: Array.isArray(appointments) ? appointments.filter(a => a.status === "scheduled").length : 0, color: "text-warning" },
+    { label: "Cancelled", value: Array.isArray(appointments) ? appointments.filter(a => a.status === "cancelled").length : 0, color: "text-destructive" },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Patient not found</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -156,7 +170,7 @@ const PatientDetail = () => {
                 </Avatar>
                 <CardTitle className="text-xl">{patient.name}</CardTitle>
                 <CardDescription>
-                  {patient.age} years • {patient.gender}
+                  {patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : "N/A"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -164,16 +178,16 @@ const PatientDetail = () => {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{patient.email}</span>
+                    <span className="text-muted-foreground">{patient.email || "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{patient.phone}</span>
+                    <span className="text-muted-foreground">{patient.phone || "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">
-                      Member since {new Date(patient.memberSince).toLocaleDateString()}
+                      Date of Birth: {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : "N/A"}
                     </span>
                   </div>
                 </div>
@@ -205,8 +219,8 @@ const PatientDetail = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {appointments.map((appointment, index) => (
-                    <div key={appointment.id} className="relative">
+                  {Array.isArray(appointments) && appointments.map((appointment, index) => (
+                    <div key={appointment.appointment_id} className="relative">
                       {/* Timeline line */}
                       {index !== appointments.length - 1 && (
                         <div className="absolute left-6 top-12 w-0.5 h-full bg-gradient-to-b from-primary/30 to-transparent"></div>
@@ -231,9 +245,9 @@ const PatientDetail = () => {
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
                               <div>
-                                <h4 className="font-semibold">{appointment.reason}</h4>
+                                <h4 className="font-semibold">{appointment.reason || "Consultation"}</h4>
                                 <p className="text-sm text-muted-foreground">
-                                  {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                                  {new Date(appointment.appointment_date).toLocaleDateString()} at {appointment.start_time}
                                 </p>
                               </div>
                               <Badge variant="outline" className={getStatusColor(appointment.status)}>
@@ -241,7 +255,7 @@ const PatientDetail = () => {
                               </Badge>
                             </div>
 
-                            {editingNote === appointment.id ? (
+                            {editingNote === appointment.appointment_id ? (
                               <div className="space-y-2 mt-3">
                                 <Textarea
                                   value={noteText}
@@ -250,7 +264,7 @@ const PatientDetail = () => {
                                   className="glass border-white/20 min-h-[100px]"
                                 />
                                 <div className="flex gap-2">
-                                  <Button size="sm" onClick={() => handleSaveNote(appointment.id)} className="hover:scale-105 transition-transform">
+                                  <Button size="sm" onClick={() => handleSaveNote(appointment.appointment_id)} className="hover:scale-105 transition-transform">
                                     <Save className="h-3 w-3 mr-1" />
                                     Save
                                   </Button>
@@ -272,7 +286,7 @@ const PatientDetail = () => {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => handleEditNote(appointment.id, appointment.notes)}
+                                  onClick={() => handleEditNote(appointment.appointment_id, appointment.notes || "")}
                                   className="mt-2 hover:scale-105 transition-transform"
                                 >
                                   <Edit className="h-3 w-3 mr-1" />
@@ -286,7 +300,7 @@ const PatientDetail = () => {
                     </div>
                   ))}
 
-                  {appointments.length === 0 && (
+                  {(!Array.isArray(appointments) || appointments.length === 0) && (
                     <div className="text-center py-12">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                       <p className="text-muted-foreground">No appointment history available</p>

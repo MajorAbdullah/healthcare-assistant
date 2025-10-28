@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, User, FileText, CheckCircle, XCircle, LogOut } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -9,16 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-
-interface Appointment {
-  id: number;
-  time: string;
-  patientName: string;
-  patientId: number;
-  reason: string;
-  status: "scheduled" | "completed" | "cancelled";
-  notes?: string;
-}
+import api, { type Appointment } from "@/lib/api";
 
 const CalendarView = () => {
   const navigate = useNavigate();
@@ -26,17 +17,37 @@ const CalendarView = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [notes, setNotes] = useState("");
   const [view, setView] = useState<"month" | "week" | "day">("month");
+  const [isLoading, setIsLoading] = useState(false);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [doctorId, setDoctorId] = useState<number>(0);
 
-  const doctorName = localStorage.getItem("doctorName") || "Doctor";
+  const doctorName = localStorage.getItem("doctor_name") || "Doctor";
 
-  // Mock appointments data
-  const appointments: Appointment[] = [
-    { id: 1, time: "09:00 AM", patientName: "Sarah Johnson", patientId: 1, reason: "Regular checkup", status: "scheduled" },
-    { id: 2, time: "10:30 AM", patientName: "Michael Chen", patientId: 2, reason: "Blood pressure monitoring", status: "completed", notes: "BP normal, continue medication" },
-    { id: 3, time: "11:00 AM", patientName: "Emily Davis", patientId: 3, reason: "Diabetes consultation", status: "scheduled" },
-    { id: 4, time: "02:00 PM", patientName: "James Wilson", patientId: 4, reason: "Follow-up appointment", status: "cancelled" },
-    { id: 5, time: "03:30 PM", patientName: "Lisa Anderson", patientId: 5, reason: "Vaccination", status: "scheduled" },
-  ];
+  useEffect(() => {
+    const id = localStorage.getItem("doctor_id");
+    if (!id) {
+      toast.error("Please login first");
+      navigate("/doctor/auth");
+      return;
+    }
+    setDoctorId(parseInt(id));
+    loadAppointments(parseInt(id));
+  }, [navigate]);
+
+  const loadAppointments = async (id: number) => {
+    try {
+      setIsLoading(true);
+      const result = await api.doctor.getAppointments(id);
+      if (result.success && result.data) {
+        setAppointments(Array.isArray(result.data.appointments) ? result.data.appointments : []);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load appointments");
+      setAppointments([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -48,17 +59,45 @@ const CalendarView = () => {
     setNotes(appointment.notes || "");
   };
 
-  const handleSaveNotes = () => {
-    if (selectedAppointment) {
-      toast.success("Notes saved successfully");
-      setSelectedAppointment(null);
+  const handleSaveNotes = async () => {
+    if (!selectedAppointment) return;
+    
+    try {
+      const result = await api.appointment.updateNotes(
+        selectedAppointment.appointment_id,
+        notes
+      );
+      
+      if (result.success) {
+        toast.success("Notes saved successfully");
+        loadAppointments(doctorId); // Reload appointments
+        setSelectedAppointment(null);
+      } else {
+        toast.error(result.message || "Failed to save notes");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save notes");
     }
   };
 
-  const handleMarkComplete = () => {
-    if (selectedAppointment) {
-      toast.success("Appointment marked as completed");
-      setSelectedAppointment(null);
+  const handleMarkComplete = async () => {
+    if (!selectedAppointment) return;
+    
+    try {
+      const result = await api.appointment.updateStatus(
+        selectedAppointment.appointment_id,
+        "completed"
+      );
+      
+      if (result.success) {
+        toast.success("Appointment marked as completed");
+        loadAppointments(doctorId); // Reload appointments
+        setSelectedAppointment(null);
+      } else {
+        toast.error(result.message || "Failed to update status");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update status");
     }
   };
 
@@ -164,51 +203,55 @@ const CalendarView = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {appointments.map((appointment) => (
-                    <div
-                      key={appointment.id}
-                      onClick={() => handleAppointmentClick(appointment)}
-                      className="glass p-4 rounded-lg border border-white/20 hover:scale-[1.02] transition-all duration-300 cursor-pointer hover:shadow-card"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3 flex-1">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {getInitials(appointment.patientName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold">{appointment.patientName}</h4>
-                              <Badge variant="outline" className={getStatusColor(appointment.status)}>
-                                {appointment.status}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {appointment.time}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                {appointment.reason}
-                              </span>
-                            </div>
-                            {appointment.notes && (
-                              <p className="text-sm text-muted-foreground mt-2 italic">
-                                Notes: {appointment.notes}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" className="hover:scale-110 transition-transform">
-                          View
-                        </Button>
-                      </div>
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
-                  ))}
-
-                  {appointments.length === 0 && (
+                  ) : appointments.length > 0 ? (
+                    appointments.map((appointment) => (
+                      <div
+                        key={appointment.appointment_id}
+                        onClick={() => handleAppointmentClick(appointment)}
+                        className="glass p-4 rounded-lg border border-white/20 hover:scale-[1.02] transition-all duration-300 cursor-pointer hover:shadow-card"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {getInitials(appointment.patient_name || "Patient")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-semibold">{appointment.patient_name || "Patient"}</h4>
+                                <Badge variant="outline" className={getStatusColor(appointment.status)}>
+                                  {appointment.status}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {appointment.start_time}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  {appointment.reason || "Consultation"}
+                                </span>
+                              </div>
+                              {appointment.notes && (
+                                <p className="text-sm text-muted-foreground mt-2 italic">
+                                  Notes: {appointment.notes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" className="hover:scale-110 transition-transform">
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
                     <div className="text-center py-12">
                       <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                       <p className="text-muted-foreground">No appointments scheduled for this date</p>
@@ -236,19 +279,19 @@ const CalendarView = () => {
               <div className="flex items-center gap-3">
                 <Avatar className="h-16 w-16">
                   <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                    {getInitials(selectedAppointment.patientName)}
+                    {getInitials(selectedAppointment.patient_name || "Patient")}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-semibold text-lg">{selectedAppointment.patientName}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedAppointment.time}</p>
+                  <h3 className="font-semibold text-lg">{selectedAppointment.patient_name || "Patient"}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedAppointment.start_time}</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Reason:</span>
-                  <span className="text-sm font-medium">{selectedAppointment.reason}</span>
+                  <span className="text-sm font-medium">{selectedAppointment.reason || "Consultation"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Status:</span>

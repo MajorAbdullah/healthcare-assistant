@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,20 +6,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Stethoscope } from "lucide-react";
-
-const doctors = [
-  { id: 1, name: "Dr. Aisha Khan", specialty: "Cardiologist" },
-  { id: 2, name: "Dr. James Wilson", specialty: "General Physician" },
-  { id: 3, name: "Dr. Sarah Chen", specialty: "Pediatrician" },
-  { id: 4, name: "Dr. Michael Brown", specialty: "Orthopedic" },
-];
+import api, { type Doctor } from "@/lib/api";
 
 const DoctorAuth = () => {
   const navigate = useNavigate();
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadDoctors();
+  }, []);
+
+  const loadDoctors = async () => {
+    try {
+      const result = await api.doctor.getAll();
+      if (result.success && result.data) {
+        setDoctors(Array.isArray(result.data) ? result.data : []);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load doctors");
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedDoctor) {
@@ -28,17 +38,29 @@ const DoctorAuth = () => {
     }
 
     setIsLoading(true);
-    const doctor = doctors.find(d => d.id.toString() === selectedDoctor);
+    const doctorId = parseInt(selectedDoctor);
 
-    setTimeout(() => {
-      localStorage.setItem("user_type", "doctor");
-      localStorage.setItem("doctor_id", selectedDoctor);
-      localStorage.setItem("doctor_name", doctor?.name || "");
-      localStorage.setItem("doctor_specialty", doctor?.specialty || "");
-      toast.success(`Welcome back, ${doctor?.name}!`);
-      navigate("/doctor/dashboard");
+    try {
+      const result = await api.doctor.login(doctorId);
+      
+      if (result.success && result.data) {
+        const doctor = doctors.find(d => d.doctor_id === doctorId);
+        
+        localStorage.setItem("user_type", "doctor");
+        localStorage.setItem("doctor_id", selectedDoctor);
+        localStorage.setItem("doctor_name", doctor?.name || "");
+        localStorage.setItem("doctor_specialty", doctor?.specialty || "");
+        
+        toast.success(`Welcome back, ${doctor?.name}!`);
+        navigate("/doctor/dashboard");
+      } else {
+        toast.error(result.message || "Login failed");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Login failed");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -63,10 +85,10 @@ const DoctorAuth = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {doctors.map((doctor) => (
-                    <SelectItem key={doctor.id} value={doctor.id.toString()} className="py-3">
+                    <SelectItem key={doctor.doctor_id} value={doctor.doctor_id.toString()} className="py-3">
                       <div className="flex flex-col items-start">
                         <span className="font-medium">{doctor.name}</span>
-                        <span className="text-sm text-muted-foreground">{doctor.specialty} • ID: {doctor.id}</span>
+                        <span className="text-sm text-muted-foreground">{doctor.specialty} • ID: {doctor.doctor_id}</span>
                       </div>
                     </SelectItem>
                   ))}

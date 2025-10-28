@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Send, Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import api from "@/lib/api";
 
 interface Message {
   id: string;
@@ -27,11 +29,22 @@ const MedicalChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("user_id");
+    if (!storedUserId) {
+      toast.error("Please login first");
+      navigate("/patient/auth");
+      return;
+    }
+    setUserId(parseInt(storedUserId));
+  }, [navigate]);
 
   useEffect(() => {
     scrollToBottom();
@@ -40,6 +53,11 @@ const MedicalChat = () => {
   const handleSendMessage = async (messageText?: string) => {
     const text = messageText || input.trim();
     if (!text) return;
+
+    if (!userId) {
+      toast.error("Please login first");
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -52,33 +70,32 @@ const MedicalChat = () => {
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: Message = {
+    try {
+      const result = await api.chat.sendMessage(userId, text);
+      
+      if (result.success && result.data) {
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: result.data.answer,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+      } else {
+        throw new Error(result.message || "Failed to get response");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send message");
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: getAIResponse(text),
+        content: "I'm sorry, I encountered an error. Please try again.",
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
-  };
-
-  const getAIResponse = (question: string): string => {
-    const lowerQuestion = question.toLowerCase();
-    
-    if (lowerQuestion.includes("blood pressure")) {
-      return "High blood pressure can be caused by several factors including:\n\n• Unhealthy diet (high sodium intake)\n• Lack of physical activity\n• Obesity\n• Excessive alcohol consumption\n• Stress\n• Genetics\n\nIt's important to monitor your blood pressure regularly and consult with a healthcare provider for personalized advice.";
-    } else if (lowerQuestion.includes("diabetes")) {
-      return "Managing diabetes involves:\n\n• Regular blood sugar monitoring\n• Following a balanced diet\n• Regular physical exercise\n• Taking medications as prescribed\n• Maintaining a healthy weight\n• Regular check-ups with your doctor\n\nAlways work closely with your healthcare team for the best management plan.";
-    } else if (lowerQuestion.includes("stroke")) {
-      return "Common stroke symptoms (FAST):\n\n• **F**ace drooping\n• **A**rm weakness\n• **S**peech difficulty\n• **T**ime to call emergency services\n\nOther symptoms may include:\n• Sudden numbness or weakness\n• Confusion or trouble speaking\n• Vision problems\n• Severe headache\n\nIf you suspect a stroke, call emergency services immediately.";
-    } else if (lowerQuestion.includes("diet") || lowerQuestion.includes("healthy")) {
-      return "Healthy diet tips:\n\n• Eat plenty of fruits and vegetables\n• Choose whole grains over refined grains\n• Include lean proteins (fish, poultry, legumes)\n• Limit saturated fats and trans fats\n• Reduce sodium intake\n• Stay hydrated with water\n• Control portion sizes\n\nConsider consulting a nutritionist for a personalized meal plan.";
     }
-    
-    return "Thank you for your question. While I can provide general health information, I recommend consulting with a healthcare professional for personalized medical advice. Is there a specific health topic you'd like to learn more about?";
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
