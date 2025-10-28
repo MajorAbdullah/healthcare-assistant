@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class SmartCalendarAssistant:
     def __init__(self):
         self.pd_client = None

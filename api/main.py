@@ -57,9 +57,11 @@ def get_rag_engine():
     global rag_engine
     if rag_engine is None:
         try:
+            # Use the same vector DB path as the main app
+            vector_db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'vector_db')
             rag_engine = RAGEngine(
                 collection_name="medical_knowledge",
-                persist_directory="./chroma_db",
+                persist_directory=vector_db_path,
                 api_key=None,
                 model_name="gpt-3.5-turbo"
             )

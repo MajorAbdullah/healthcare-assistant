@@ -28,13 +28,13 @@ def main():
     table.add_column("File", style="dim", width=30)
     
     table.add_row("1", "🏥 Patient Portal (MAIN APP)", "healthcare_assistant.py")
-    table.add_row("2", "�‍⚕️ Doctor Portal (NEW!)", "doctor_portal.py")
-    table.add_row("3", "�💬 Medical Q&A Demo", "demo_qa.py")
-    table.add_row("4", "📅 Calendar Integration Demo", "final_demo.py")
-    table.add_row("5", "🧠 Memory Manager Test", "test_memory_manager.py")
+    table.add_row("2", "👨‍⚕️ Doctor Portal (NEW!)", "doctor_portal.py")
+    table.add_row("3", "💬 Medical Q&A Demo", "tests/demo_qa.py")
+    table.add_row("4", "📅 Calendar Integration Demo", "tests/final_demo.py")
+    table.add_row("5", "🧠 Memory Manager Test", "tests/test_memory_manager.py")
     table.add_row("6", "📆 Interactive Calendar", "calendar_assistant.py")
-    table.add_row("7", "🔍 Test RAG System", "test_rag_complete.py")
-    table.add_row("8", "⚙️  Test Scheduler", "test_scheduler.py")
+    table.add_row("7", "🔍 Test RAG System", "tests/test_rag_complete.py")
+    table.add_row("8", "⚙️  Test Scheduler", "tests/test_scheduler.py")
     table.add_row("9", "📊 View Database Stats", "(query database)")
     table.add_row("10", "ℹ️  Show Documentation", "(list docs)")
     table.add_row("0", "🚪 Exit", "")
@@ -60,15 +60,15 @@ def main():
     
     elif choice == "3":
         console.print("[green]Starting Medical Q&A Demo...[/green]\n")
-        subprocess.run([sys.executable, "demo_qa.py"])
+        subprocess.run([sys.executable, "tests/demo_qa.py"])
     
     elif choice == "4":
         console.print("[green]Running Calendar Integration Demo...[/green]\n")
-        subprocess.run([sys.executable, "final_demo.py"])
+        subprocess.run([sys.executable, "tests/final_demo.py"])
     
     elif choice == "5":
         console.print("[green]Testing Memory Manager...[/green]\n")
-        subprocess.run([sys.executable, "test_memory_manager.py"])
+        subprocess.run([sys.executable, "tests/test_memory_manager.py"])
     
     elif choice == "6":
         console.print("[green]Launching Interactive Calendar...[/green]\n")
@@ -76,11 +76,11 @@ def main():
     
     elif choice == "7":
         console.print("[green]Testing RAG System...[/green]\n")
-        subprocess.run([sys.executable, "test_rag_complete.py"])
+        subprocess.run([sys.executable, "tests/test_rag_complete.py"])
     
     elif choice == "8":
         console.print("[green]Testing Scheduler...[/green]\n")
-        subprocess.run([sys.executable, "test_scheduler.py"])
+        subprocess.run([sys.executable, "tests/test_scheduler.py"])
     
     elif choice == "9":
         console.print("[cyan]Database Statistics:[/cyan]\n")
@@ -99,13 +99,15 @@ def main():
     elif choice == "10":
         console.print("[cyan]📚 Documentation Files:[/cyan]\n")
         docs = [
-            "COMPLETE.md - Final summary",
-            "HEALTHCARE_README.md - Main documentation",
-            "HEALTHCARE_PROJECT_PLAN.md - Complete plan",
-            "IMPLEMENTATION_ROADMAP.md - Development guide",
-            "PROJECT_SUMMARY.md - Executive summary",
-            "PHASE1_COMPLETE.md - RAG system",
-            "PHASE3_COMPLETE.md - Memory system",
+            "docs/COMPLETE.md - Final summary",
+            "docs/HEALTHCARE_README.md - Main documentation",
+            "docs/HEALTHCARE_PROJECT_PLAN.md - Complete plan",
+            "docs/IMPLEMENTATION_ROADMAP.md - Development guide",
+            "docs/PROJECT_SUMMARY.md - Executive summary",
+            "docs/PHASE1_COMPLETE.md - RAG system",
+            "docs/PHASE3_COMPLETE.md - Memory system",
+            "docs/API_ENDPOINTS.md - Backend API reference",
+            "docs/FRONTEND_PROMPTS.md - Frontend specifications",
             "CHANGELOG.md - Change history"
         ]
         for doc in docs:
