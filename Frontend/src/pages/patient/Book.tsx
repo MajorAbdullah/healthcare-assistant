@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Star, CheckCircle2, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, Star, CheckCircle2, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import api, { type Doctor, type TimeSlot } from "@/lib/api";
 
 const BookAppointment = () => {
@@ -99,9 +99,19 @@ const BookAppointment = () => {
       return;
     }
 
+    // Prevent double submission
+    if (isLoading) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       const dateStr = selectedDate.toISOString().split('T')[0];
+      
+      // Show loading toast with calendar sync message
+      const loadingToast = toast.loading("Booking appointment and syncing to Google Calendar...", {
+        duration: Infinity,
+      });
       
       const result = await api.appointment.book({
         user_id: userId,
@@ -112,8 +122,11 @@ const BookAppointment = () => {
         sync_calendar: true
       });
 
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+
       if (result.success) {
-        toast.success("Appointment booked successfully!");
+        toast.success("Appointment booked and synced to calendar!");
         setStep(5);
       } else {
         toast.error(result.message || "Failed to book appointment");
@@ -335,11 +348,27 @@ const BookAppointment = () => {
                 </div>
 
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setStep(3)} 
+                    className="flex-1"
+                    disabled={isLoading}
+                  >
                     Go Back
                   </Button>
-                  <Button onClick={handleConfirm} className="flex-1">
-                    Confirm Booking
+                  <Button 
+                    onClick={handleConfirm} 
+                    className="flex-1"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Syncing to Calendar...
+                      </>
+                    ) : (
+                      "Confirm Booking"
+                    )}
                   </Button>
                 </div>
               </CardContent>
