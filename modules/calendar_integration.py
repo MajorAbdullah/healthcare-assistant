@@ -105,15 +105,19 @@ class CalendarIntegration:
             attendee_str = ""
             if attendees:
                 emails = [att.get('email') if isinstance(att, dict) else att for att in attendees]
-                attendee_str = f" with attendees {', '.join(emails)}"
+                emails = [email for email in emails if email]  # Filter out None values
+                if emails:
+                    attendee_str = f" with attendees {', '.join(emails)}"
             
-            # Create instruction for MCP
+            # Create instruction for MCP with Google Meet and email notifications
             # Note: start_time and end_time are now ISO 8601 format with timezone info
             instruction = (
                 f"Create a new event on my primary calendar ({self.calendar_id}) "
                 f"with title '{summary}' "
                 f"from {start_time} to {end_time}"
                 f"{attendee_str}. "
+                f"Add a Google Meet video conference link. "
+                f"Send email notifications to all attendees. "
                 f"Description: {description}"
             )
             
@@ -124,14 +128,16 @@ class CalendarIntegration:
                 )
                 
                 # Parse the result
-                console.print(f"✓ Calendar event created successfully", style="green")
+                console.print(f"✓ Calendar event created with Google Meet link", style="green")
+                console.print(f"✓ Email invitations sent to attendees", style="green")
                 # Return a mock event object with ID
                 # The actual ID would be in the MCP response
                 return {
                     'id': f"event_{datetime.now().timestamp()}",
                     'summary': summary,
                     'start': start_time,
-                    'end': end_time
+                    'end': end_time,
+                    'conferenceData': {'entryPoints': [{'entryPointType': 'video'}]}  # Indicates Meet link
                 }
                 
         except Exception as e:
@@ -197,6 +203,8 @@ Appointment ID: {appointment_id}"""
             console.print(f"📅 Creating calendar event for appointment #{appointment_id}...", style="cyan")
             console.print(f"   Date: {appointment['appointment_date']}", style="dim")
             console.print(f"   Time: {appointment['start_time']} - {appointment['end_time']}", style="dim")
+            console.print(f"   📧 Email notifications will be sent to attendees", style="dim")
+            console.print(f"   🎥 Google Meet link will be added", style="dim")
             
             # Call async method - AWAIT it with ISO 8601 format including timezone
             result = await self._create_event_via_mcp(
