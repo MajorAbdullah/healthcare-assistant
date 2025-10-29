@@ -108,11 +108,11 @@ class CalendarIntegration:
                 attendee_str = f" with attendees {', '.join(emails)}"
             
             # Create instruction for MCP
+            # Note: start_time and end_time are now ISO 8601 format with timezone info
             instruction = (
                 f"Create a new event on my primary calendar ({self.calendar_id}) "
                 f"with title '{summary}' "
-                f"from {start_time} to {end_time} "
-                f"in timezone Asia/Karachi"
+                f"from {start_time} to {end_time}"
                 f"{attendee_str}. "
                 f"Description: {description}"
             )
@@ -164,16 +164,25 @@ class CalendarIntegration:
             return False, "Doctor not found", None
         
         try:
-            # Format appointment for calendar
-            # Combine date and time for start/end (in Asia/Karakat timezone)
+            # Format appointment for calendar with proper timezone handling
+            import pytz
+            
+            # Use proper timezone (Pakistan Standard Time)
+            pkt_tz = pytz.timezone('Asia/Karachi')
+            
             start_datetime = datetime.strptime(
                 f"{appointment['appointment_date']} {appointment['start_time']}",
                 "%Y-%m-%d %H:%M:%S" if len(appointment['start_time']) > 5 else "%Y-%m-%d %H:%M"
             )
+            # Localize to Pakistan timezone (don't use replace, use localize)
+            start_datetime = pkt_tz.localize(start_datetime)
+            
             end_datetime = datetime.strptime(
                 f"{appointment['appointment_date']} {appointment['end_time']}",
                 "%Y-%m-%d %H:%M:%S" if len(appointment['end_time']) > 5 else "%Y-%m-%d %H:%M"
             )
+            # Localize to Pakistan timezone
+            end_datetime = pkt_tz.localize(end_datetime)
             
             # Create event description
             summary = f"Appointment: {appointment['patient_name']}"
@@ -189,12 +198,12 @@ Appointment ID: {appointment_id}"""
             console.print(f"   Date: {appointment['appointment_date']}", style="dim")
             console.print(f"   Time: {appointment['start_time']} - {appointment['end_time']}", style="dim")
             
-            # Call async method - AWAIT it
+            # Call async method - AWAIT it with ISO 8601 format including timezone
             result = await self._create_event_via_mcp(
                 summary=summary,
                 description=description,
-                start_time=start_datetime.strftime("%Y-%m-%d %H:%M"),
-                end_time=end_datetime.strftime("%Y-%m-%d %H:%M"),
+                start_time=start_datetime.isoformat(),  # ISO 8601 with timezone
+                end_time=end_datetime.isoformat(),      # ISO 8601 with timezone
                 attendees=[appointment.get('patient_email'), doctor.get('email')]
             )
             

@@ -106,7 +106,11 @@ const BookAppointment = () => {
 
     try {
       setIsLoading(true);
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      // Format date in local timezone to avoid UTC conversion shifting the date
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
       
       // Show loading toast with calendar sync message
       const loadingToast = toast.loading("Booking appointment and syncing to Google Calendar...", {
