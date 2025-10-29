@@ -9,9 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, date, timedelta
+import pytz
 import json
 import sys
 import os
+
+# Set Pakistan/Asia timezone
+PAKISTAN_TZ = pytz.timezone('Asia/Karachi')
 
 # Add parent directory to path to import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,8 +23,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from modules.scheduler import AppointmentScheduler
 from modules.rag_engine import RAGEngine
 from modules.memory_manager import MemoryManager
-# Calendar sync disabled for now - requires async setup
-# from modules.calendar_sync import CalendarSync
+from modules.calendar_integration import CalendarIntegration
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -52,6 +55,7 @@ app.add_middleware(
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'healthcare.db')
 
 scheduler = AppointmentScheduler()
+calendar_integration = CalendarIntegration(scheduler)
 memory_manager = MemoryManager(db_path=DB_PATH)
 
 # RAG Engine (lazy loading to avoid startup delay)
@@ -115,7 +119,7 @@ class AppointmentBook(BaseModel):
     date: str  # YYYY-MM-DD
     time: str  # HH:MM
     reason: Optional[str] = None
-    sync_calendar: bool = False
+    sync_calendar: bool = True  # Default to True - sync appointments to Google Calendar
 
 class MedicalNote(BaseModel):
     notes: str
@@ -319,23 +323,28 @@ async def get_patient_greeting(user_id: int):
         if not user:
             raise HTTPException(status_code=404, detail="Patient not found")
         
+        # Get current time in Pakistan timezone
+        now_pakistan = datetime.now(PAKISTAN_TZ)
+        today_pakistan = now_pakistan.date().strftime('%Y-%m-%d')
+        current_time = now_pakistan.time().strftime('%H:%M')
+        
         # Get next upcoming appointment
         cursor.execute('''
             SELECT a.*, d.name as doctor_name, d.specialty
             FROM appointments a
             JOIN doctors d ON a.doctor_id = d.doctor_id
             WHERE a.user_id = ? AND a.status = 'scheduled'
-            AND (a.appointment_date > date('now') OR 
-                 (a.appointment_date = date('now') AND a.start_time > time('now')))
+            AND (a.appointment_date > ? OR 
+                 (a.appointment_date = ? AND a.start_time > ?))
             ORDER BY a.appointment_date, a.start_time
             LIMIT 1
-        ''', (user_id,))
+        ''', (user_id, today_pakistan, today_pakistan, current_time))
         
         upcoming = cursor.fetchone()
         conn.close()
         
-        # Generate greeting
-        hour = datetime.now().hour
+        # Generate greeting using Pakistan timezone
+        hour = now_pakistan.hour
         if hour < 12:
             time_greeting = "Good morning"
         elif hour < 17:
@@ -349,7 +358,7 @@ async def get_patient_greeting(user_id: int):
         if upcoming:
             # Check if appointment is tomorrow
             appt_date = datetime.strptime(upcoming['appointment_date'], "%Y-%m-%d").date()
-            today = date.today()
+            today = now_pakistan.date()
             
             if appt_date == today:
                 when = "today"
@@ -452,42 +461,39 @@ async def get_doctor_availability(doctor_id: int, date: str):
 async def book_appointment(booking: AppointmentBook):
     """Book a new appointment"""
     try:
-        # Book the appointment
-        appointment_id = scheduler.book_appointment(
-            user_id=booking.user_id,
-            doctor_id=booking.doctor_id,
-            appointment_date=booking.date,
-            start_time=booking.time,
-            reason=booking.reason
-        )
-        
-        if not appointment_id:
-            raise HTTPException(status_code=400, detail="Unable to book appointment. Time slot may be unavailable.")
-        
-        # Sync to calendar if requested
+        # Use calendar integration if sync_calendar is True (default), otherwise use scheduler directly
         if booking.sync_calendar:
-            try:
-                # Calendar sync requires async setup - mark for manual sync
-                conn = get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute('''
-                    UPDATE appointments
-                    SET synced_to_calendar = 1
-                    WHERE appointment_id = ?
-                ''', (appointment_id,))
-                conn.commit()
-                conn.close()
-                print(f"✓ Appointment {appointment_id} marked for calendar sync")
-            except Exception as e:
-                print(f"Calendar sync flag failed: {e}")
-                # Don't fail the booking if calendar sync fails
+            success, message, appointment_id = await calendar_integration.book_appointment_with_calendar_async(
+                user_id=booking.user_id,
+                doctor_id=booking.doctor_id,
+                appointment_date=booking.date,
+                start_time=booking.time,
+                reason=booking.reason,
+                create_calendar_event=True
+            )
+        else:
+            success, message, appointment_id = scheduler.book_appointment(
+                user_id=booking.user_id,
+                doctor_id=booking.doctor_id,
+                appointment_date=booking.date,
+                start_time=booking.time,
+                reason=booking.reason
+            )
+        
+        if not success or not appointment_id:
+            raise HTTPException(status_code=400, detail=message or "Unable to book appointment. Time slot may be unavailable.")
+        
+        # Get the created appointment details
+        appointment = scheduler.get_appointment(appointment_id)
+        calendar_event_id = appointment.get('calendar_event_id') if appointment else None
         
         return {
             "success": True,
             "data": {
                 "appointment_id": appointment_id,
                 "date": booking.date,
-                "time": booking.time
+                "time": booking.time,
+                "calendar_event_id": calendar_event_id
             },
             "message": "Appointment booked successfully!"
         }
@@ -744,12 +750,21 @@ async def get_doctor_stats(doctor_id: int):
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Get Pakistan time
+        now_pakistan = datetime.now(PAKISTAN_TZ)
+        today_pakistan = now_pakistan.date().strftime('%Y-%m-%d')
+        
+        # Calculate week start (Monday) in Pakistan timezone
+        days_since_monday = now_pakistan.weekday()
+        week_start = (now_pakistan.date() - timedelta(days=days_since_monday)).strftime('%Y-%m-%d')
+        week_end = today_pakistan
+        
         # Today's appointments
         cursor.execute('''
             SELECT COUNT(*) as count
             FROM appointments
-            WHERE doctor_id = ? AND appointment_date = date('now')
-        ''', (doctor_id,))
+            WHERE doctor_id = ? AND appointment_date = ?
+        ''', (doctor_id, today_pakistan))
         today_count = cursor.fetchone()['count']
         
         # Total patients
@@ -765,9 +780,9 @@ async def get_doctor_stats(doctor_id: int):
             SELECT COUNT(*) as count
             FROM appointments
             WHERE doctor_id = ? 
-            AND appointment_date >= date('now', 'weekday 0', '-7 days')
-            AND appointment_date <= date('now', 'weekday 0')
-        ''', (doctor_id,))
+            AND appointment_date >= ?
+            AND appointment_date <= ?
+        ''', (doctor_id, week_start, week_end))
         week_count = cursor.fetchone()['count']
         
         # Completion rate
@@ -811,6 +826,9 @@ async def get_doctor_appointments(
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Get today's date in Pakistan timezone
+        today_pakistan = datetime.now(PAKISTAN_TZ).date().strftime('%Y-%m-%d')
+        
         query = '''
             SELECT a.*, u.name as patient_name, u.email as patient_email, u.phone as patient_phone
             FROM appointments a
@@ -821,7 +839,8 @@ async def get_doctor_appointments(
         params = [doctor_id]
         
         if date == "today":
-            query += " AND a.appointment_date = date('now')"
+            query += " AND a.appointment_date = ?"
+            params.append(today_pakistan)
         elif date:
             query += " AND a.appointment_date = ?"
             params.append(date)
@@ -837,7 +856,9 @@ async def get_doctor_appointments(
         
         return {
             "success": True,
-            "data": [dict(appt) for appt in appointments]
+            "data": {
+                "appointments": [dict(appt) for appt in appointments]
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

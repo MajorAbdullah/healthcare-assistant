@@ -109,7 +109,7 @@ const BookAppointment = () => {
         date: dateStr,
         time: selectedTime,
         reason: reason || "General consultation",
-        sync_calendar: false
+        sync_calendar: true
       });
 
       if (result.success) {
