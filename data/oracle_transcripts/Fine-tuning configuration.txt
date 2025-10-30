@@ -1,0 +1,55 @@
+Welcome to this lesson on Generative AI fine-tuning configuration. So what you see on the right-hand side is the OCI console showing the various options available for fine tuning and fine-tuning configurations.
+
+First, let's look at what methods are available. So we have two training methods available today within the service, T-Few, which we have looked at earlier, and LoRA, which is Low Rank Adaptation. Now PEFT, I think we discussed this earlier, stands for Parameter Efficient Fine Tuning, which basically means adjusting a model without changing everything about it.
+
+Now I'll give you an analogy because this is a complicated topic. Imagine a deep learning model as a very complex machine with many parts. When we want the machine to perform a new task, we don't have to rebuild the entire machine. Instead, we can make small adjustments. And the two popular methods for doing these smaller adjustments are T-Few and LoRA.
+
+And we have looked at T-Few in the previous lessons. Imagine T-Few is like adding small helper parts to the machine. And these helpers, you could think about as new layers, to tweak just a few things without changing everything.
+
+LoRA, on the other hand, is like adding special gears to the machine to adjust it while leaving the main parts unchanged. So this is a quick analogy. And this way, what I'm trying to say is the machine can perform a new task without a whole makeover using either of these techniques.
+
+And then right here on the screen, you see various hyperparameters, fine-tuning configuration parameters. And a bunch of these parameters we'll look at in the next slide.
+
+All right, so what are these fine-tuning parameters? And this one, I'm talking in the context of T-Few in the context of LoRA. These will change a little bit. And it's always a good idea to look at the current documentation, because I have some valid range and some default values, which might change by the time you are watching this particular lesson.
+
+And these are, again, very complicated topics. So let me give you an analogy, the same analogy we used earlier on having this deep learning as a machine, as a complex machine. So think about total training epochs as how many times we let the machine study the task data. More epochs mean more study time.
+
+Training batch size, think of this as how many parts of the task data the machine studies at once. Larger batches can speed up learning, but smaller batches might provide more detailed insight.
+
+Learning rate is how fast the machine adjusts its settings based on what it learns. A higher rate means quicker adjustments, while a lower rate means more careful changes.
+
+Early stopping threshold basically sets the standard for when the machine should stop studying if it is not improving fast enough. While on the other hand, early stopping patience is how long the machine waits before deciding it's not learning enough to continue.
+
+And then finally, the log model metrics interval in steps sets how often the machine checks and records its progress during its study sessions. So hopefully, this quick analogy helps you understand some of these hyperparameters in a much better context.
+
+These are complex topics, so if you want to go back and relisten to what I just said, you can do that. Or you can refer to documentation and go deep and see how these parameters are defined, what are some of the values you should be using.
+
+Now, once we have looked at the training methods and the various hyperparameters available, let us look at how you can evaluate the fine-tuning results, because that's a very important topic as well. So there are two key metrics we use. The first one is called accuracy. And accuracy basically measures whether the generated tokens from the model match the annotated tokens.
+
+Now, you might ask what is an annotated token? Basically, annotated tokens refer to the correct or expected tokens. So these could be words or characters that have been manually labeled or predefined as the right output for a given input. These are usually created by human experts or derived from high-quality reference data.
+
+For example, if a language model is trained to summarize a sentence, the annotated tokens would be the correct summary that the model is expected to generate. And an accuracy basically measures how well the model's generated tokens match these annotated or correct tokens. And next slide, I will actually give you an example.
+
+So accuracy basically tells you how many predictions the model got wrong. Loss, on the other hand, measures how wrong the generated outputs of a model are. So see the emphasis here on how wrong the generated outputs of a model are. And I'll give you another example so you can see how this works in real life.
+
+Loss of 0 basically means all outputs were perfect. While on the other hand, a large loss number indicates highly random outputs. And loss decreases as a model improves. So let's look at these in action in a real-world context.
+
+We already looked at the definition of accuracy. And accuracy is calculated as the percentage of correct tokens, predictions compared to the ground truth. So let's look at an example. Let's say the ground truth is the cat sat on the mat. Simple sentence.
+
+And the model predicted after fine tuning, the cat slept on the rug. And so if you compare these tokens predicted by the model versus the ground truth, there are two tokens or words which are different, slept and rug. Four tokens are correct, what the model should have predicted and what the model actually predicted. So 4 out of 6 are correct.
+
+Incorrect tokens are two, slept and rug. It should be sat. And instead of rug, it should be mat. So there are 2 out of 6 incorrect tokens. So accuracy in this case is 4 by 6 into 100, 4 it got correct, so that's 67%. Now this is a very simplified example just to give you an idea of how this works.
+
+And the thing with accuracy is even if the model output conveys the same meaning but uses different words, accuracy may still be low. Correct. So this is why accuracy is not always the best metric for model fine tuning. So let's look at the next one, which is loss.
+
+Now loss, basically as we discussed earlier, measures how wrong the generated outputs of a model are. And it's calculated through a probability distribution difference between the model's prediction and the actual output. You're not getting into all the technical details, but let's bring up the previous example.
+
+So if the ground truth is the cat sat on the mat, like we saw in the previous slide, let's say the first model prediction after fine tuning said something like the cat slept on the rug. Exactly what we saw earlier. Now four tokens are correct here, "cat on the." Slept is similar to sat, you could argue. And rug is similar to mat. Could be different. Both are floor coverings and slept and sat are both verbs of rest.
+
+So in this case, even the accuracy is 67%, loss is relatively low as the mistakes are minor. The context is similar. You have slept instead of sat, and rug is similar to mat. So loss is not a huge number. It's relatively low because mistakes are minor and the context is important here.
+
+Now let's look at another model prediction. This is let's say you have done fine tuning again. And this is what the model predicted. The airplane flew at midnight. Now none of these words match the original sentence. And the generated sentence is completely irrelevant. It should have been cat sat on the mat or cat slept on the rug or whatever. It shouldn't be airplane and flying at midnight, et cetera.
+
+So in this case, the model output is completely irrelevant. And loss is very high as the model output is completely different from the ground truth. So just to compare, loss is the preferred metric compared to accuracy, because generative AI does not always have a single correct answer. The context is more important.
+
+So these are two metrics we use for figuring out the results of fine tuning of results. So hopefully, this lesson gives you a quick context on what training methods are supported, what some of these hyperparameters means, and then what actually we mean by using accuracy and loss to measure the results of fine tuning. I hope you found this lesson useful. Thanks for your time.

@@ -19,6 +19,7 @@ const BookAppointment = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState("");
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [reason, setReason] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<number>(0);
@@ -50,27 +51,38 @@ const BookAppointment = () => {
     }
   };
 
-  const loadAvailability = async (doctorId: number, date: string) => {
+    const loadAvailability = async (doctorId: number, date: string) => {
     try {
       setIsLoading(true);
+      setSelectedTime(""); // Reset selected time when loading new slots
       const result = await api.doctor.getAvailability(doctorId, date);
       if (result.success && result.data) {
-        // API returns { available_slots: ["09:00", "09:30", ...] }
+        // API returns { available_slots: ["09:00", "09:30", ...], booked_slots: ["10:00", ...] }
         const slots = result.data.available_slots || [];
+        const booked = result.data.booked_slots || [];
+        
         // Convert strings to TimeSlot objects
         const timeSlots: TimeSlot[] = (slots as any[]).map((time: any) => ({ 
           start_time: typeof time === 'string' ? time : time.start_time, 
           end_time: "", 
           duration: 30 
         }));
+        
         setAvailableSlots(timeSlots);
+        setBookedSlots(booked as string[]);
+        
+        if (timeSlots.length === 0) {
+          toast.info("No available slots for this date. Please choose another date.");
+        }
       } else {
         toast.error("No available slots for this date");
         setAvailableSlots([]);
+        setBookedSlots([]);
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to load availability");
       setAvailableSlots([]);
+      setBookedSlots([]);
     } finally {
       setIsLoading(false);
     }
@@ -130,10 +142,27 @@ const BookAppointment = () => {
       toast.dismiss(loadingToast);
 
       if (result.success) {
-        toast.success("Appointment booked and synced to calendar!");
+        toast.success("Appointment request submitted! Waiting for doctor approval.", {
+          duration: 5000,
+        });
         setStep(5);
       } else {
-        toast.error(result.message || "Failed to book appointment");
+        // Check if it's a conflict error
+        if (result.message && result.message.includes("already booked")) {
+          toast.error("This time slot is no longer available. Please choose another time.", {
+            duration: 5000,
+          });
+          // Go back to time selection
+          setStep(3);
+          setSelectedTime("");
+          // Reload availability
+          if (selectedDate && selectedDoctor) {
+            const dateStr = selectedDate.toISOString().split('T')[0];
+            loadAvailability(selectedDoctor.doctor_id, dateStr);
+          }
+        } else {
+          toast.error(result.message || "Failed to book appointment");
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to book appointment");
@@ -271,16 +300,22 @@ const BookAppointment = () => {
                     <div>
                       <h4 className="font-semibold mb-3">Available Time Slots</h4>
                       <div className="grid grid-cols-3 gap-3">
-                        {availableSlots.map((slot, index) => (
-                          <Button
-                            key={index}
-                            variant={selectedTime === slot.start_time ? "default" : "outline"}
-                            onClick={() => handleTimeSelect(slot.start_time)}
-                            className="w-full"
-                          >
-                            {slot.start_time}
-                          </Button>
-                        ))}
+                        {availableSlots.map((slot, index) => {
+                          const isBooked = bookedSlots.includes(slot.start_time);
+                          return (
+                            <Button
+                              key={index}
+                              variant={selectedTime === slot.start_time ? "default" : "outline"}
+                              onClick={() => !isBooked && handleTimeSelect(slot.start_time)}
+                              className="w-full"
+                              disabled={isBooked}
+                              title={isBooked ? "This slot is already booked" : ""}
+                            >
+                              {slot.start_time}
+                              {isBooked && <span className="ml-2 text-xs">(Booked)</span>}
+                            </Button>
+                          );
+                        })}
                       </div>
                     </div>
                   </>
@@ -386,16 +421,17 @@ const BookAppointment = () => {
             <Card className="glass-card text-center">
               <CardContent className="pt-12 pb-12 space-y-6">
                 <div className="flex justify-center">
-                  <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center">
-                    <CheckCircle2 className="w-12 h-12 text-success" />
+                  <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center">
+                    <CheckCircle2 className="w-12 h-12 text-amber-600" />
                   </div>
                 </div>
                 <div>
-                  <h2 className="text-3xl font-bold mb-2">Appointment Confirmed!</h2>
-                  <p className="text-muted-foreground">Your appointment has been successfully booked</p>
+                  <h2 className="text-3xl font-bold mb-2">Request Submitted!</h2>
+                  <p className="text-muted-foreground">Your appointment request is pending doctor approval</p>
                 </div>
 
-                <div className="p-6 bg-gray-50 rounded-lg space-y-3 text-left max-w-md mx-auto">
+                <div className="p-6 bg-amber-50 border border-amber-200 rounded-lg space-y-3 text-left max-w-md mx-auto">
+                  <p className="text-sm text-amber-900 font-medium">⏳ Awaiting Approval</p>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Doctor:</span>
                     <span className="font-semibold">{selectedDoctor.name}</span>
@@ -409,6 +445,11 @@ const BookAppointment = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Time:</span>
                     <span className="font-semibold">{selectedTime}</span>
+                  </div>
+                  <div className="mt-4 p-3 bg-white rounded border border-amber-300">
+                    <p className="text-sm text-amber-900">
+                      📧 Google Calendar will send you an email invitation once the doctor approves your appointment.
+                    </p>
                   </div>
                 </div>
 

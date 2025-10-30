@@ -1,0 +1,71 @@
+Welcome, everyone. In this lesson, let us look at Embedding Models available in the OCI Generative AI service. First, let us understand what embeddings are. Embeddings are numerical representations of a piece of text converted to number sequences.
+
+A piece of text could be a word. It could be a phrase, could be a sentence, could be a paragraph, or it could be an entire document, one or more paragraphs. Embeddings make it easy for computers to understand the relationship between pieces of text.
+
+Now, let us look at a practical example where embeddings are used. So for example, if I have a sentence, which is something like, "They sent me a," or rather, the phrase, "They sent me a," and I sent this to an encoder. It's an LLM architecture.
+
+Now, encoders are really designed to take that text-- so this is an encoder-- and convert it into a vector. So you see these five vectors? There is a vector for each of the words, and there is also a vector representation for the sentence. So that's basically what the illustration is showing here.
+
+But what is the use of doing so? Well, the real use case comes through when you are doing something like translation, which is a sequence-to-sequence task. So you have an encoder here, and then you have a decoder here. So the set of tokens is passed to the model here, the encoder, set of tokens or the words.
+
+And it takes these words or tokens and converts them into vectors. And these vectors are then fed into a decoder, which starts emitting tokens in a self-referential loop. And we covered some of this in our first module on LLM basics.
+
+And here, what we are trying to do is translate text in English from English to Hebrew. So that's basically what it's being done. So hopefully, you can see how embeddings are used because this is basically what computers understand in order to understand the relationship between pieces of text.
+
+So taking that example further-- basically, word embeddings, if you just consider the words for now, capture properties of the word. So another example here is let's say we have these different words. We have "kitten," "cat," "puppy," "dog," "lion," "elephant," and we map them according to two properties-- their age and their size. And age is on the vertical axis, and size is on the horizontal axis. So elephant is bigger than a lion is bigger than a dog and so on, and so forth.
+
+So this is the kind of mapping we would get. Now, actual embeddings represent more properties or coordinates than just two, which are shown here-- age and size. And these rows of more than two coordinates are called vectors and represented as numbers.
+
+So now you can see here, if we take a word like "puppy" or "kitten," you can see it has multiple numbers associated with it. And some of this is quite intuitive, like age or size. So we convert that into a numerical representation. But there might be some other properties which are shown here.
+
+Now, from the previous slide, you can understand that you have embeddings for any word, and embeddings are simply vector of numbers. So when you have vector of numbers, you can also compute numerical similarity. A similarity measure takes these embeddings which are numbers and returns a number measuring their similarity. This is called numerical similarity.
+
+So basically, you are saying how numerically similar these vectors, which are basically vector of numbers. And there are two techniques which are used-- Cosine Similarity and Dot Product Similarity. Again, we are not getting into details behind each of these, but these techniques could be used to compute numerical similarity.
+
+And the thing which is really important here is embeddings that are numerically similar are also semantically similar. Semantically similar basically means how close their meaning is or how closely they are related. So let me give you another example just extending from the previous slide.
+
+Now, let us say we have more words. So we have animals here, we have fruits here, and we have cities here. And so you can see that embedding vector of a puppy will be more similar to dog than that of a lion, or that of New York, or strawberry.
+
+So you can see these clusters getting formed now. And there are three groups of clusters which are formed based on similarity. You have animals, you have fruits, and you have places. And all three clusters are semantically similar, and their vectors are numerically similar as well. And that's how we figured out that they are semantically similar.
+
+Now, if you have a new word which is given, such as "tiger," you could place it closer to the animals group, close to the cat family member. So this is quite intuitive because you understand what a tiger is and so on, and so forth. But for words which are not that intuitive, this is the concept of how embeddings really work.
+
+Now, taking this further, what we looked at until now were sentence embeddings-- were word embeddings. Now let us look at sentence embedding. A sentence embedding associates every sentence with a vector of numbers, similar to a word embedding.
+
+And similar sentences are assigned to similar vectors. Different sentences are assigned to different vectors. So they are numerically similar, similar sentences. Different sentences are numerically different.
+
+So the embedding vector of a phrase such as "canine companions say" will be more similar to the embedding vector of "woof" you can see here, than that of a "meow." "Meow" would be closer to a "feline friends say."
+
+So the important concept to remember here or understand here is now we are comparing two phrases. So this is a phrase, collection of words, to a single word. And similarly, we could compare words against sentences, against paragraphs, group of paragraphs, et cetera. And we can say how similar or different they are.
+
+Now, what is the use case of doing all of this? We saw an earlier use case of a sequence-to-sequence task like translation where embeddings are used behind the scenes. But there is also another very important use case, and that is around retrieval-augmented generation.
+
+Now, one of the main challenges faced by today's generative models or embedding models is their inability to connect with your company's data. A promising approach to overcoming this limitation is Retrieval-Augmented Generation, RAG. So how fundamentally it works is you can take a large corpus of documents, break it into chunks or paragraphs, and generate the embedding for each paragraph, and store all the embeddings into a vector database.
+
+Now, vector databases are capable of automating the cosine similarity and doing nearest-match searches through that database for some search embedding, you want to search for. So this basically powers the whole RAG system.
+
+And the way it works is, let's say you have a user who has some question which cannot be answered by LLM. Maybe it's related to your customer support calls or something. So the user question is encoded as a vector and sent to the vector database.
+
+Now vector database can run a nearest match in the vector database to identify the most closely associated documents or paragraphs. And it finds this is the private content which closely matches the user query. And then what it can do is it can take those documents or those paragraphs and insert those into a prompt to be sent to the large language model. And basic idea is to help answer the user question by changing the prompt. And then the LLM uses the content which has been given by the vector database plus its general knowledge to provide an informed answer.
+
+So this is, in a nutshell, a big part of how RAG systems work. And good retrieval quality is essential to make this work. And this is where embeddings play a major role.
+
+Now let us look at embedding models available in the OCI Generative AI service. Like we already saw, you take a text, you convert this text into numbers, text as vectors, and these are embeddings. And the embedding models which are supported in the OCI Generative AI service include models from Cohere. So Cohere.embed-English basically converts English text into vector embeddings.
+
+There is also english-lite embedding model, which is the smaller and faster version of embed-english. There is Cohere.embed-multilingual, which is the state-of-the-art multilingual embedding model that can convert text in over 100 languages into vector embedding. It can also enable searching within a language.
+
+So you search with a French query on French documents and across languages. You can search with a French query on English documents. And the use cases, as we already saw, are around semantic search, text classification, text clustering, clustering, et cetera.
+
+Now let's dive a little bit deeper into each of these models. So the English model and the multilingual model-- of course, they support English and multilingual languages. The model creates a 1,024-dimensional vector for each embedding. So every embedding, whether it's a sentence, a phrase, or paragraph, gets converted into 1,024-dimensional vector. And the model takes a max of 512 tokens per embedding.
+
+Now, you see this v3 embed model. This is something which Cohere launched recently. And one of the key improvements in embed v3 is its ability to evaluate how well a query matches a document's topic and assess the overall quality of the content.
+
+This means that it can rank the highest-quality documents at the top, which is especially helpful when dealing with noisy data sets. And it can drastically improve, significantly improve retrievals for RAG systems. So wherever possible, use the v3 model.
+
+We also have the light versions of these v3 models-- smaller, faster versions. And here, the embedding is much smaller, so it creates a 384-dimensional vector versus 1,024 for the embed models. And the tokens is still max 512 tokens per embedding.
+
+And we also have the previous generation model available. And here, you can see some of the numbers-- the 1,024-dimensional vector, 512 tokens. Now, you can input sentence, phrases, or paragraphs for embeddings either one phrase at a time in these models or by uploading a file. Now, keep in mind that a maximum of 96 inputs are allowed for each run. And each input, as we have shown here, must be less than 512 tokens.
+
+So that's pretty much everything around OCI embedding models available in the OCI Generative AI service. We looked at what embeddings are. We looked at some of the details behind embedding models in the OCI Generative AI Service.
+
+And in a subsequent demo, we'll actually see it in action. I hope you found this lesson useful. Thanks for your time.

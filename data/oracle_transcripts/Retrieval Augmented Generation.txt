@@ -1,0 +1,15 @@
+Let us understand what is Retrieval Augmented Generation. Traditional language models generate responses based solely on their training data, which can become outdated. RAG addresses this by retrieving up-to-date information from external sources and providing this additional and specific information to LLM, along with the user query, thus enhancing the context provided to the LLM for generating more relevant response.
+
+A few benefits of this approach are standard LLMs can sometimes carry forward biases or errors present in their training data. RAG can mitigate this by pulling in a variety of perspectives and sources, leading to more balanced and accurate responses. RAG can also overcome model limitations such as token limits since we are only feeding top K search results to the LLMs instead of the whole document. RAG allows models to handle a broader range of queries without the need for exponentially larger training data sets.
+
+Let us see how a basic Retrieval Augmented Generation pipeline looks like. Let us see step-by-step explanation of the process. Ingestion, this is the first phase where documents are ingested into the system.
+
+Here we begin with loading the documents. Documents are the original text corpus. The documents are broken down into smaller, more manageable pieces, often referred to as chunks.
+
+This is typically done to focus on relevant sections of the text. Each chunk is then transformed into a mathematical representation called as embeddings. These embeddings capture the semantic information of the text and allow for comparisons to be made in a numerical space. The embeddings are indexed in a database that facilitates quick retrieval. The index is a data structure that allows the system to find and retrieve embeddings efficiently when a query is made.
+
+Retrieval, in this phase, the system uses the index data to find relevant information. Retrieval begins when a user inputs a question that needs to be answered. The system uses the query to search through the stored indexed embeddings to find the most relevant chunks.
+
+From the retrieved documents, the system selects the top K, that is a preset number of the most relevant results. These are the chunks that are most likely to contain information relevant to the query. Generation, this is the final phase where the system generates a response based on the information retrieved. The selected chunks from the retrieval phase are fed into the generative model.
+
+The generative model, often a neural network like a transformer, uses the context provided by the top K chunks to generate a coherent and contextually relevant response to the query. The RAG architecture is very effective in scenarios where generative models need to be supplemented with specific information that may not be present in the training data. Thanks for watching.

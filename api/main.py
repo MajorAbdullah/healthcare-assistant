@@ -145,6 +145,7 @@ def get_db_connection():
     """Get database connection from scheduler"""
     return scheduler._get_connection()
 
+
 def format_datetime(date_str: str, time_str: str) -> str:
     """Combine date and time into readable format"""
     try:
@@ -439,8 +440,30 @@ async def get_doctor_availability(doctor_id: int, date: str):
         # Use scheduler's method
         available_slots = scheduler.get_doctor_availability(doctor_id, date_obj)
         
+        # Get booked/pending slots for this date
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT start_time, end_time, status
+            FROM appointments
+            WHERE doctor_id = ? 
+                AND appointment_date = ?
+                AND status IN ('scheduled', 'confirmed', 'pending_approval')
+        """, (doctor_id, date))
+        
+        booked_slots = [
+            {
+                'start_time': row['start_time'],
+                'end_time': row['end_time'],
+                'status': row['status']
+            } 
+            for row in cursor.fetchall()
+        ]
+        conn.close()
+        
         # Format slots for frontend (just return start times)
         slot_times = [slot['start_time'] for slot in available_slots]
+        booked_times = [slot['start_time'] for slot in booked_slots]
         
         return {
             "success": True,
@@ -448,6 +471,7 @@ async def get_doctor_availability(doctor_id: int, date: str):
                 "date": date,
                 "doctor_id": doctor_id,
                 "available_slots": slot_times,
+                "booked_slots": booked_times,
                 "total_slots": len(slot_times)
             }
         }
@@ -459,33 +483,60 @@ async def get_doctor_availability(doctor_id: int, date: str):
 
 @app.post("/api/v1/appointments")
 async def book_appointment(booking: AppointmentBook):
-    """Book a new appointment"""
+    """Book a new appointment with approval workflow"""
     try:
-        # Use calendar integration if sync_calendar is True (default), otherwise use scheduler directly
-        if booking.sync_calendar:
-            success, message, appointment_id = await calendar_integration.book_appointment_with_calendar_async(
-                user_id=booking.user_id,
-                doctor_id=booking.doctor_id,
-                appointment_date=booking.date,
-                start_time=booking.time,
-                reason=booking.reason,
-                create_calendar_event=True
-            )
-        else:
-            success, message, appointment_id = scheduler.book_appointment(
-                user_id=booking.user_id,
-                doctor_id=booking.doctor_id,
-                appointment_date=booking.date,
-                start_time=booking.time,
-                reason=booking.reason
-            )
+        # Check if slot is already booked or pending approval
+        doctor = scheduler.get_doctor_by_id(booking.doctor_id)
+        if not doctor:
+            raise HTTPException(status_code=404, detail="Doctor not found")
         
-        if not success or not appointment_id:
-            raise HTTPException(status_code=400, detail=message or "Unable to book appointment. Time slot may be unavailable.")
+        # Calculate end time
+        from datetime import datetime, timedelta
+        start_dt = datetime.strptime(booking.time, '%H:%M')
+        end_dt = start_dt + timedelta(minutes=doctor['consultation_duration'])
+        end_time = end_dt.strftime('%H:%M')
+        
+        # Check for any existing appointments (including pending approval)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT COUNT(*) as count
+            FROM appointments
+            WHERE doctor_id = ? 
+                AND appointment_date = ?
+                AND status IN ('scheduled', 'confirmed', 'pending_approval')
+                AND NOT (end_time <= ? OR start_time >= ?)
+        """, (booking.doctor_id, booking.date, booking.time, end_time))
+        
+        conflict_count = cursor.fetchone()['count']
+        conn.close()
+        
+        if conflict_count > 0:
+            raise HTTPException(status_code=409, detail="This time slot is already booked or pending approval. Please choose another time.")
+        
+        # Book appointment with 'pending_approval' status
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO appointments 
+            (user_id, doctor_id, appointment_date, start_time, end_time, reason, status, approval_email_sent, confirmation_email_sent)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending_approval', 0, 0)
+        """, (
+            booking.user_id,
+            booking.doctor_id,
+            booking.date,
+            booking.time,
+            end_time,
+            booking.reason or "General consultation"
+        ))
+        
+        appointment_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
         
         # Get the created appointment details
         appointment = scheduler.get_appointment(appointment_id)
-        calendar_event_id = appointment.get('calendar_event_id') if appointment else None
         
         return {
             "success": True,
@@ -493,9 +544,10 @@ async def book_appointment(booking: AppointmentBook):
                 "appointment_id": appointment_id,
                 "date": booking.date,
                 "time": booking.time,
-                "calendar_event_id": calendar_event_id
+                "status": "pending_approval",
+                "message": "Appointment request submitted. Waiting for doctor approval."
             },
-            "message": "Appointment booked successfully!"
+            "message": "Appointment request submitted successfully! You will be notified once the doctor approves."
         }
     except HTTPException:
         raise
@@ -537,6 +589,90 @@ async def get_patient_appointments(user_id: int, limit: Optional[int] = None, st
             "success": True,
             "data": [dict(appt) for appt in appointments]
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/appointments/{appointment_id}/approve")
+async def approve_appointment(appointment_id: int):
+    """Doctor approves an appointment and syncs to calendar"""
+    try:
+        # Get appointment details
+        appointment = scheduler.get_appointment(appointment_id)
+        if not appointment:
+            raise HTTPException(status_code=404, detail="Appointment not found")
+        
+        if appointment['status'] != 'pending_approval':
+            raise HTTPException(status_code=400, detail="Appointment is not pending approval")
+        
+        # Update status to confirmed
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE appointments
+            SET status = 'confirmed'
+            WHERE appointment_id = ?
+        ''', (appointment_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        # Sync to Google Calendar
+        try:
+            success, message, _ = await calendar_integration.book_appointment_with_calendar_async(
+                user_id=appointment['user_id'],
+                doctor_id=appointment['doctor_id'],
+                appointment_date=appointment['appointment_date'],
+                start_time=appointment['start_time'],
+                reason=appointment.get('reason', 'Medical consultation'),
+                create_calendar_event=True
+            )
+            
+            if not success:
+                print(f"Warning: Calendar sync failed: {message}")
+        except Exception as e:
+            print(f"Warning: Calendar sync error: {e}")
+        
+        return {
+            "success": True,
+            "message": "Appointment approved! Google Calendar will send email notifications to both patient and doctor."
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/appointments/{appointment_id}/reject")
+async def reject_appointment(appointment_id: int):
+    """Doctor rejects an appointment request"""
+    try:
+        appointment = scheduler.get_appointment(appointment_id)
+        if not appointment:
+            raise HTTPException(status_code=404, detail="Appointment not found")
+        
+        if appointment['status'] != 'pending_approval':
+            raise HTTPException(status_code=400, detail="Appointment is not pending approval")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE appointments
+            SET status = 'cancelled'
+            WHERE appointment_id = ?
+        ''', (appointment_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Appointment request rejected. Patient can book a different time slot."
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

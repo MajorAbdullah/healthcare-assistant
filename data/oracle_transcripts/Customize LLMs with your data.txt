@@ -1,0 +1,55 @@
+Hello, everyone. Welcome to this lesson on customizing LLMs with your data. Before we dive deeper, let us look at whether you can train LLMs from scratch with your data. It's not a great idea to do so. Why? There are three main reasons.
+
+The first reason is it's very expensive to train these models. You can see some numbers here. It's around-- roughly costs a million dollar to train a language model with 10 billion parameters. You need a lot of data for training these models. For example, Meta's Llama-2 model was trained on 2 trillion tokens. That's something like a billion legal briefs. And you need a lot of annotated data. Basically, data which is labeled, categorized, and tagged. So it's also very labor intensive.
+
+And then you need a lot of expertise. Pre-training these models is hard-- requires a thorough understanding of the model performance, how to monitor for it, detect and mitigate hardware failures, and understands the limitations of the model. So it's not a great idea to train LLMs from scratch with your data. So what are the options?
+
+There are three options you could use to customize your LLMs. The first option is what we refer to as in-context learning or few-shot prompting. We looked at these techniques in the prompt engineering lesson.
+
+The basic idea is that user provides demonstrations in the prompt to teach the model how to perform certain tasks. So you can see here I'm giving a task description asking the model to translate some words in English to French, and then I'm asking it to translate another word from English to French. So this is in-context learning.
+
+Another technique which is used is called chain of thought prompting, where you are asking the model to break a problem into smaller chunks and solve each of these intermediate steps or each of these intermediate chunks. The main limitation here is the model context window and the length. Many of the models have length around 4,096 tokens or even smaller. And that is all the number of tokens a model can process at any given time. So this is the main limitation why you would not use few-shot prompting.
+
+Another technique which you can use to customize your LLMs is called fine-tuning. And we'll discuss fine-tuning in subsequent lessons, but the main idea here is you are optimizing a model on a smaller domain-specific data set. And it is recommended when a pre-trained model doesn't perform your task well or when you want to teach it something new. And using fine-tuning, your model can adapt to specific style and tone and learn human preferences.
+
+Now there are two main advantages of doing fine-tuning. The first one is you are improving the model performance on specific tasks. It's much more effective than prompt engineering. And by customizing the model to domain specific data, it can better understand and generate contextually relevant responses.
+
+The second advantage is you are improving the model efficiency. You are reducing the number of tokens needed for your model to perform well on your task, and you're condensing the expertise of a large model into a smaller, more efficient model. So these are the two main advantages of or the benefits of using fine-tuning.
+
+The third approach, which you can use to customize your models is-- Large Language Models is retrieval augmented generation. And here what you are doing is you are hooking the language model to some kind of enterprise knowledge base. It could be a database. It could be a wiki. It could be a vector database to provide grounded responses. And grounded basically means that the generated text is grounded in a document if the document supports the text.
+
+So you can see an example here a person is chatting with a virtual chat bot, which is-- and the person says, can I return the dress I just purchased? And the chat bot goes back to the enterprise database and picks up the return policy and says a couple of things. Return has to be within this window and items purchased on sale cannot be returned. This is coming from an enterprise database.
+
+And then the user says, how do I know it is on sale? And she uploads her receipt. And then the chat bot basically goes and again looks up the enterprise database to see when this item was purchased what was the price and whether it was on sale or not.
+
+So this is a great example where there is not a human sitting on the other side. It's a virtual chat bot built using this framework and going back to an enterprise data source and really giving grounded responses because using RAG you can give the model access to private knowledge that it otherwise would not have like your return policy and the return window et cetera. Important thing to keep in mind is RAGs do not require any kind of fine-tuning or custom models.
+
+So now having seen all these three techniques, let us compare and contrast them side by side. So few-shot prompting is useful when the LLM already understands the topic that are necessary for text generation. It's very simple to do. There is no training cost. But on the disadvantages, you're adding latency to each model request.
+
+Fine-tuning, on the other hand, is used when the LLM is not performing well on a particular task. And the data required to adapt the LLM is too large for prompt engineering because you will hit that context window length problem. And then also when your latency with your current Large Language Model is too high. So those are some of the use cases why you would use fine-tuning.
+
+And, of course, the advantage is you're making the models more efficient. You're increasing the performance. No impact on model latency. The disadvantage here is it's not easy. It requires a labeled data set, which can be expensive and time consuming to acquire. And it's very labor intensive.
+
+The third approach is RAG. And you would use RAG, as we saw, when the data changes rapidly like your written policy could change. So you hook it up to a system and keep that on record, or when you want to mitigate hallucinations by grounding answers and enterprise data.
+
+Now the advantage with RAG is you are always accessing the latest data. Your grounding the results, and you don't require any kind of fine-tuning. But the disadvantage is RAG is more complex to set up and requires a compatible data source that's very important. So these are the advantages, disadvantages, and the use cases when you would use one of these techniques.
+
+Now one thing which you would think is do I have to use RAG versus fine-tuning versus prompt engineering? And the answer sometimes is-- many times is not really because each of these are solving a different set of problems. So the framework you should think about is on these two dimensions.
+
+So the first is context optimization on the horizontal axis. And this is what the model needs to know what's the context for the model. And on the vertical axis, you have LLM optimization. What is the method that the model needs to act on.
+
+So the first thing you start with is prompt engineering. It's the easiest to start with. You can test and learn quickly. You can get to an evaluation, figure out how you're going to consistently evaluate your outputs. And from here, then you can decide whether it's a context problem or whether it's an LLM optimization problem.
+
+If it's a context problem, then you use a RAG system. If it's an LLM optimization problem, you need your model to follow more instructions-- more instruction following, then you can use fine-tuning. And sometimes, you're using all of them because some of these are additives. So you require both these approaches or all three of these approaches.
+
+So let us look at what a typical journey would look like. You would start at the bottom corner here. You have a prompt, and then you create an evaluation framework, and you figure out what your baseline is. So that's where you start. Start with a simple prompt.
+
+Then you can give some few shot examples of input/output pairs you want your model to follow. So still in prompt engineering, but you're giving some-- you're adding a few shot examples. Then you can add a simple retriever using RAG.
+
+Now let us say you have these few shot examples increase your model performance. Now you hook your model to an enterprise knowledge base and create a RAG system. Now let us say that you are satisfied with your model, but the output is not coming out in the format or style that you really want.
+
+So now you can take this model and you can fine-tune this model, which is built on RAG. And then it-- probably the output is in your style, but then maybe you figure out that once you have done that, the retrieval results are not that good and so you want to optimize the RAG system further. So you can actually go back and optimize your retrieval and so on and so forth.
+
+You can see a pattern here where you are literally using all the different techniques, and it depends on your optimization journey when and which technique to use. So hopefully, it gives you a good framework on how to think about a bunch of these techniques.
+
+And that's pretty much it. In this lesson, we briefly looked at how you can customize LLMs with your own data. The three main techniques being few-shot prompting, fine-tuning and retrieval-augmented generation. I hope you found this lesson useful. Thanks for your time.

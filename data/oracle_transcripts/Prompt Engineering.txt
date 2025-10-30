@@ -1,0 +1,53 @@
+Welcome, everyone to this lesson on prompt engineering. In this lesson, we are going to focus on prompt and prompt engineering in generic terms. But in a subsequent demo, we'll see this in action. So let's get started.
+
+First, let us define prompt and prompt engineering. Prompt is basically the input or initial text provided to the Large Language Model. And prompt engineering is basically the process of iteratively refining a prompt for the purpose of eliciting a particular style or a particular type of response from the large language model.
+
+Now, in previous lessons, we have seen that LLMs basically our next word predictors, or they basically predict the next set of words or next set of token. And text prompts are basically how users interact with Large Language Models. And what LLMs do, they attempt to produce the next series of words that are most likely to follow from the previous text. We have seen this in the previous lessons.
+
+So, for example, if you provide a prompt, which says four score and four years ago, our and you stop here, basically, the LLM will complete this particular prompt. And it will go, forefathers brought forth a new nation blah, blah, blah. And goes all the way, shall not perish from the Earth-- I have actually put the concise form here. The speech is much longer. This is Lincoln's Gettysburg speech from 1863 very famous speech.
+
+So basically, what Large Language Model is doing here is if you give it a prompt, it's trying-- it's basically completing that prompt here. And it's a well known speech so the language model knows what next words should come.
+
+So, if this is the case, then basically the way completion LLMs are trained-- they are trained to predict the next word on a large data set of internet text rather than to safely perform the language tasks that the user wants.
+
+So if this is the case, you cannot give instructions or ask questions to a completion LLM. Instead what you need to do is, for every prompt, you need to formulate your input as a prompt whose natural continuation or completion is your desired output. Now this is not practical. And this is not how Large Language Models work. And there have been several research papers put-- where they have put forth how they have fine-tuned their models.
+
+So, for example, this paper on Llama 2 came out in 2023. And basically, they talked about how reinforcement learning from human feedback is used to fine-tune LLMs to follow a broad class of written instructions. So let me just pause here and give you a little bit more context.
+
+So Llama 2 foundational models were trained on a data set with 2 trillion tokens-- the base model. Now Llama 2 chat-- Llama 2 chat is a different model than the base model. That was additionally fine-tuned on something like 28,000 prompt response pairs created for this particular project.
+
+And to align Llama 2 to follow instructions, what we refer to as AI alignment, Reinforcement Learning with Human Feedback, RLHF, was used with a combination of more than 1.4 million meta examples and 7 smaller data data sets.
+
+For folks who are not familiar with RLHF, it's a model training procedure that is applied to a fine-tuned language model to further align model behavior with human preferences and instruction following. So, in this case, human annotators write prompts, and they compare the model outputs.
+
+The human feedback is subsequently used to train a reward model which learns patterns in the preferences of the human annotators and can then automate preference decisions. So this is how reinforcement learning from human feedback works. And in today's context, most of the LLMs can follow instructions because those models are fine-tuned. And something like Reinforcement Learning from Human Feedback is used to fine-tune those LLMs to follow a broad class of written instructions.
+
+Now changing here, let's look at what is in-context learning and few-shot prompting. Now the reason I want to bring this forward is, in general, prompt engineering is challenging, but it can also be successful. There have been many successful strategies for generating prompts that are useful and successful for specific tasks and particular models. And we will list a few of them.
+
+So the first one is this thing called in-context learning. Now, it is not learning in the traditional sense as none of the model parameters are changing. What it means is that it has demonstrations of the task that the model is supposed to complete. And you're basically conditioning an LLM with instructions and demonstrations of the task the LLM is meant to complete.
+
+So, in this example here-- and there is something also called k-shot prompting, where you explicitly provide k examples-- k as in the numbers 0, 1, 2 of the intended task in the prompt. So the example which follows here is from a paper from 2020. And basically, what they are saying is they are asking the Large Language Model to translate some text from English to French. And here, we have three examples, which follow. And they basically are asking the model to take the next word here and translate it into French.
+
+Now one thing I would like to clarify in the paper they call the first line as the task description, then they explicitly call examples. And they are saying cheese is the prompt, and they want cheese to be translated into French. But in reality, this whole entire statement or this whole set of instruction is a prompt. And basically, even though they have labeled different pieces of the text to signify what is the task versus what are the examples, this whole thing is a prompt, not just the cheese here.
+
+So this is an example of a three-shot prompting because you're giving three demonstrations or three examples. Now, in general, few-shot prompting is widely believed to improve results over zero-shot prompting. So, in case of zero-shot prompting, it would basically mean you give-- translate English to French as a task description, and you don't give any of these examples. And you provide cheese as a prompt, and you expect the output to be in French-- the word to be translated into French, but few-shot prompting is widely believed to improve results over zero-shot prompting.
+
+Now also one thing to keep in mind is when you give these prompts, you have to care about the prompt format Large Language Models like Llama 2 are trained on a specific prompt format. If you format your prompt in a different way, you may get different results or results-- inferior results, suboptimal results.
+
+So, for example, Llama 2 prompt formatting follows a specific set of tags. And if you don't put these tags in this way, you will not get the desired output. So, for example, if you're managing dialogue state with multiple exchanges between a user and the Llama 2 model because it's optimized for dialogue use cases, you need to mark the dialogue terms with instruction tags.
+
+So here you say beginning of the entire sequence, here you say beginning of instruction, and here you say end of instruction. And this is how you format your instructions with these instruction tags. Now not only this. You can also modify the system prompt that is used to guide model responses. By altering the input to the system prompt argument, you can inject custom context or information that will be used to guide model output.
+
+So here you can see, I've given my system prompt within this system tags, and also my user message comes here. So you have to strictly follow this particular format. If you don't, you will not get an optimal result. And we will see this in a subsequent demo.
+
+Finally, let me just conclude this lesson by giving you a couple of advanced prompting strategies. So the one prompting strategy which is used a lot is called chain-of-thought prompting. And here the idea is you are providing examples in a prompt to show responses that include a reasoning step.
+
+So the idea here is, if we have a complicated task, then we are going to prompt the model to break the problem into small chunks exactly like you would solve it. Personally, if you are solving it yourself and then let the model solve each of the intermediate steps.
+
+So you can see here, I have a question here asking-- kind of a simple math question, but it's difficult for the Large Language Model to comprehend. And in my answer, I'm giving intermediate steps and I'm-- so I'm breaking this problem into smaller chunks with kind of translating into verbal equations.
+
+And this paper came out in 2022 and the research paper showed that chain-of-thought prompting lets the model accomplish complex tasks that involve intermediate reasoning. So this is something which is definitely a successful prompting strategy.
+
+Another strategy, which is quite popular is also-- is called zero shot chain-of-thought. It's similar to chain of thought, but you don't provide an example. Rather what you do is you provide something like this phrase here-- let's think step by step, and it would do the same thing as the previous example. And it would break the problem down complex-- complicated task into smaller chunks, and it would solve the intermediate steps. And then finally, it will solve the entire problem.
+
+So these are a couple of advanced prompting strategies which you could use. That's pretty much it on prompt engineering. I know this was a lot of generic theory, but we will see-- in the next demo, we will see all of this in action. I hope you found this lesson useful. Thanks for your time.

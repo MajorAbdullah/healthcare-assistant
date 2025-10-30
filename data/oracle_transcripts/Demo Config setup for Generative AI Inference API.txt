@@ -1,0 +1,41 @@
+In the previous demo, we invoked the Generative AI Inference API. In this demo, let us see how we can set up the config file and parameters in order for this invocation to be successful.
+
+Well, right here is the config file. Let me just zoom in a little bit more. So you can see that the config profile is default. You can have multiple profiles listed here.
+
+There is user OCID, there is fingerprint, there is tenancy OCID. The region I'm using is Frankfurt-1, Frankfurt, and then the key file is the particular private key file, which is available in this location. And the content of the private key file looks something like this.
+
+Now, this invocation was working successfully earlier. So now, let's change that. Let's remove-- let's play with this file here and save this file. I just deleted the private key file content. And now let's go back and run the API and we'll see that the API invocation will fail.
+
+So, I am in the Jupyter Notebook. And this is the notebook we were running earlier. And now let's go ahead. And you saw in the previous demo that the invocation was successful as indicated by a 200 status return here.
+
+So let me status code written there. And then so let me now go ahead and run this code again. And remember that we have changed the content of the private key file, so this invocation will now fail.
+
+So if I go and hit Enter again-- shift and Enter again, you will see that I get this error message now. And if you scroll down-- it's a long error message, scroll down, you can see that the provided key is not a private key or the provided passphrase is incorrect.
+
+So this invocation failed because we deleted the content of the private key file. So now let's go ahead and set it up in the console and see how it-- and invoke it again. And the API will-- Inference API invocation will work.
+
+So let me switch over to the console. And this is the Generative AI console. We were there earlier and we had run this particular prompt and we were programmatically running this thing.
+
+So now to set up the config parameters and the files, let's click on my profile here. You can see my profile is listed here. And I'll click on this link, which says My Profile.
+
+And as I do that, it will basically bring up my details, my profile details, things like API keys, OAuth token, et cetera. So I'll click on API keys. And here you can see that I can add an API key. There is one which is already added. This is the one which I was using in the previous demo and successfully invoking the Generative AI Inference API.
+
+Now let me go ahead and add a new API key. So before I do that, let me just delete this particular key because we're not going to use it anymore. So I'll click on Add API key here. And now you can read more about the API keys, standard RSA key pair in PEM format used for signing API request.
+
+Now I can generate an API key pair, public and private. I can choose a public key file or paste a public key, so I have different options. So what I'm going to do is I'm going to download the private key file here. And I will also click on Add here.
+
+And now the config gets added here. And you can see these parameters. Let me zoom in again. You can see these parameters again, the user OCID, the fingerprint, the tenancy, region, et cetera. So let me just copy all these values and I'll paste these values in the config file, which I've opened in Visual Studio code. So let me close here and switch over to Visual Studio code.
+
+All right. So I have pasted all the values in the Visual Studio code config file here in opening Visual Studio code. And here you can see that the fingerprint got changed. So this is the new value which got added.
+
+And then here, the key file-- the name of the key file change. And this is the new key file which we generated, both the private key and the public key. And this is the private-- the content of the private key here. So this is the one which we had deleted earlier and now it's available.
+
+So let me just go ahead and save this. And now I should be able to go and run the API call and that invocation should be successful.
+
+All right. So this is where we were with the Jupyter Notebook. And as you can see this, we had gotten this-- received this error because we had changed the content of the private key file.
+
+So now let's go ahead and run this Jupyter Notebook again. And hopefully, that error should go away and we should be able to successfully invoke this call.
+
+And as you can see here, the invocation has been successful. You see the 200 status code here and it's similar to the previous run. We can get the results back.
+
+So this was a quick demo which basically walked you through how to set up this config profile and why it is important to do the correct setup. Otherwise, the Inference API invocation will fail. I hope you found this demo useful. Thanks for your time.

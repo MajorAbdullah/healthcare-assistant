@@ -1,0 +1,27 @@
+Welcome to this demo on endpoints for custom models. In the previous demo, we created a custom model. And as you can see here, the accuracy and the loss for this particular custom model looks really good. So to click on accuracy, if you click here, you can see accuracy, definition of how we define it. And what it says here, an accuracy of 0.9 means that 90% of the output tokens match the tokens in the training data set.
+
+So accuracy of 0.98 is actually pretty fantastic. And here you can see that loss should decrease as the model improves. And a loss of 0 means that all outputs were perfect, while a large number-- a large number for loss indicates highly random outputs. So loss is kind of trending towards 0 here.
+
+So these numbers are fantastic. So now let's go ahead and create an endpoint for this custom model. So I'll click on generative AI console and click on Endpoints here. And I'll click Create an Endpoint here. I can provide an optional name, a description, and right here, I can choose the model name. And now you can see that the pre-trained foundational models are listed here, as well as the custom model we just created is actually listed here as well.
+
+So I'll pick the custom model. And you can see the model version here. And right below that, you can choose a dedicated AI cluster. Now, we created a dedicated cluster in a previous demo. And there are no custom models running there or hosted there. So you can see that the remaining capacity is 50 because we are using the Preview fine tuning technique. And using that technique, you can host up to 50 custom models, each with their own endpoint.
+
+So 50 endpoints in total. And capacity is 50. So I can use one of that, 50. Right below. I can also check this content moderation. And the idea with content moderation is to remove toxic and biased content from responses. Since I know this data and it has 2,000 kind of rephrase-- statement. So I'm going to switch this content moderation off to the default state.
+
+And then I'll click on Create Endpoint here. And what this will do is in a few minutes, an endpoint will be created for me. And then I can test the endpoint by sending some production traffic by sending some prompt-- sample prompt from the test data set and see how well the custom model is behaving.
+
+So let me pause here and come back once the endpoint for the custom model is created. All right. So creating that endpoint took a few minutes. And now you can see the status is active. So if I go back to the generative AI dashboard and click on Playground, now if I look under the Model dropdown, I can see that I have my endpoint listed here.
+
+So literally, this is my endpoint, where I can send traffic and test various prompts. Now, you remember we got the matrix on accuracy and loss. Those matrix are good first indication of model's performance. But it is good to have some qualitative assessments too. So here what we are going to do is we are going to make a few calls to the base model and custom model and compare the results.
+
+This is a good way to-- general idea to evaluate generative models for accuracy. We ask it to predict certain words in the user uploaded data or the test data. So let's go ahead and give a prompt here and ask whether the prompt is-- turn this message to a virtual assistant into the correct action. Remember, the thing we are trying to solve with the custom model is to take a request coming from a human and rephrase it into the most accurate utterance that an AI virtual assistant should use.
+
+So if we give this kind of a request and click Generate here, you will see the response comes out as do you want to go to hiking in Yellowstone with me from 8 until 11th. And if I change the temperature to make it zero, I get the same response. If I make the temperature all the way to 5 and hit Generate, I get the same response.
+
+So what this shows is the custom model has pretty good predictability and can produce quality results consistently, even when the temperature is 0 or 1 or 5. You change going all the way from deterministic all the way to being creative. And now if I change this, and remember for this particular custom model, we use the Cohere Command light-based model, not the Cohere Command model.
+
+So if we use the command light, because this is the base model, which we used for creating this custom model and we did the fine tuning, and we give the same prompt, you will see that the prompt, which comes here is different. It says, "Hello Elon, would you be interested in joining me?" So this is not the kind of response, which AI assistant would use at least in the custom data we had.
+
+And one thing I just want to clarify is this particular statement is not in the training data set, which we used for training this custom model. This is in the test data set, which the model has never seen before. And so it is predicting certain words in this test data set. We're just giving one test data set to check the results.
+
+So hopefully, you are able to see how creating a custom model is beneficial because compared to the base model, the custom model has greater predictability and is producing quality results consistently. I hope you found this demo useful. Thanks for your time.

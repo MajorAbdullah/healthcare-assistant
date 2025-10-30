@@ -1,0 +1,39 @@
+Welcome to this demo on dedicated AI clusters. In this demo, we are going to spin up dedicated AI clusters. So to do that, you can click from here and access the console, where we can create these clusters.
+
+Now, dedicated AI clusters are GPU-based compute resources running in their exclusive RDMA network. So we looked at this in detail. But before we-- so we can click Create dedicated AI cluster and create these here.
+
+But before we do that, let's make sure that our account has the service limits enabled in order for us to create dedicated AI clusters. So to do that, click on governance and administration. And right here, under tenancy management, you see limits quotas and usage. So click on limits there-- quota and usage.
+
+And I'm logged on to the Chicago region. Depending on which region you are, these limits can change. So let's bring up generative AI here.
+
+And right here, I can see generative AI. And now, you can see that, as we discussed in the theory lesson, the dedicated AI cluster come in four unit sizes. There is a small cohere dedicated. There is large cohere dedicated. There is llama2-70 dedicated. And there is embed cohere dedicated.
+
+Now, out of these four unit sizes, the one which this account has limits in is for the small cohere dedicated units. And I have three of those. So that basically means that I can run a fine tuning job. Because, remember, for fine tuning, you need two dedicated units. And I can run a hosting. I can host these models, because I need a minimum of one dedicated unit for that.
+
+But one thing to keep in mind is because my limits are for small cohere, I can only use the cohere command light model. I cannot use the cohere command model, if I'm spinning up these clusters.
+
+So having confirmed this, let's head back to generative AI console. And let's spin up these clusters. So I'll click on dedicated AI clusters. And I'll choose the compartment. I have to give a name here. So this is-- I'm doing custom fine tuning. So I'll call this is my custom fine tuning cluster.
+
+And I can give a name here. And I'll choose fine tuning. And right here, you can see that it's picking the cohere command. And it gives me an option of cohere command light. But if I choose command, I will not be able to run the fine tuning jobs, because I have to match the models to-- the base models to the cluster units, which my account is enabled.
+
+So I'll choose cohere command light. And here, it is saying that this will provision two small cohere units, which I have in my account. And also, important to note here is I have to check this box, which says that I commit to one unit hour for this fine tuning dedicated AI cluster.
+
+This, again, we saw in the theory lesson. The minimum commitment is for one unit hour. So with that, I'll click Create. And what this will do is it will take a few minutes. And it will create this file tuning dedicated AI cluster. It started creating now.
+
+So as it's doing that, let's go ahead and create a hosting dedicated AI cluster as well. So this we will call it hosting cluster. And we can provide a description. And here, it says hosting. And for the base model, I'll pick command light. And as you can see, it says, I will provision-- this will provision one small cohere unit.
+
+And here, you can see that the minimum commitment is different. It's saying I commit to 744 unit hours, meaning, this runs for the entire month. So once you create this cluster, you are pretty much using it for the entire month. But you can use this cluster to host up to 50 models, if you are using the t-few fine tuning methodology.
+
+So I'll click Yes to that. And I'll click Create. And similar to the fine tuning cluster, this will take a few minutes. And once these clusters are up and running, we'll come back. And we'll take a look at them.
+
+So that process literally took a couple of minutes. And both the hosting cluster and the fine tuning cluster are created here. And you can see the type is listed. Fine tuning here. And hosting here.
+
+And, also, for hosting, as I said, if you're using t-few methodology, or a t-few technique, you can, actually, host up to 50 models on the same cluster. So you can see that listed here. It also says the unit size. So small cohere for both. And for fine tuning, we require two units. So that's listed here. And for hosting, we need a minimum of one unit. So that's listed here as well.
+
+So if I click on the fine tuning cluster, now, you can see some details. The cluster is active. The unit is two. The unit size is small cohere. And I can start creating fine tuned models by clicking on Create model here.
+
+And this will kick off the workflow necessary to do fine tuning. So I could do that here. And if I click on hosting cluster, you can see that it can host 50 models. So endpoint capacity is 50, because I'm not running any model as of now.
+
+And once I do the fine tuning, I have a custom model created. I can create an endpoint for that model. So I can do it from here. So in the next couple of demos, we are actually going to kick off a fine tuning job.
+
+And then once a custom model is created, we'll create an endpoint and host that custom model on this hosting cluster. I hope you found this demo useful. Thanks for your time.

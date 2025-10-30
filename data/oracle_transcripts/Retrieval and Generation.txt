@@ -1,0 +1,21 @@
+So far, we have loaded documents, split them into chunks, embedded chunks, and stored them in the database. Now let us discuss retrieval. When a user enters a query that we want LLM to answer, we first encode the query using the same embedding model we used to encode the chunks.
+
+Next, we fire a search on our database where embedded chunks are stored with the encoded query. The idea here is to get back chunks that are similar to our query so that these will provide additional context to our query. The search may return multiple chunks. And vector search will return a few of these to keep the context short and relevant.
+
+The question here could be that-- how does vector search find similar chunks to the query. For this, vector search typically uses two similarity measures-- dot and cosine distance. Using these similarity measures, we can compare query embeddings and the stored chunk embeddings.
+
+Dot product measures the magnitude of the projection of one vector onto the other. Dot product considers magnitude and angle between vectors to calculate similarity. Cosine product considers only the angle between the vectors and not the magnitude to calculate similarity.
+
+In the context of NLP, the more magnitude may mean semantically richer content, and less angle means more similarity. We discuss that we need to compare user query embedding with the embedding of each chunk. This is fine when we have smaller number of junk embeddings. But as the number of chunks grow, we need a performant way to search for the similar embeddings.
+
+This is where index come in handy. Indexes are like table of content. Using indexes, embeddings can be found easily. Indexes are specialized data structures designed for similarity searches. Various techniques like clustering, partitioning, and neighbor graph are used to group embeddings. This helps reduce the search space.
+
+A hierarchical navigable small-world graph, that is HNSW, is a form of in-memory neighbor graph vector index. It is a very efficient index for vector approximate similarity search. Inverted File Flat, or IVF, is a form of neighbor partition vector index. It is a partition-based index that achieves search efficiency by narrowing the search area through the use of neighbor partitions or clusters.
+
+Once we have retrieved the context in the form of relevant chunks, we can send it to the LLM along with the query. And finally, LLM considers the context and user query to get us a relevant and specific response. Now let me walk you through the retrieval code.
+
+First we import the necessary classes. That is RetrievalQA, ChatOCIGenAI, and OracleVS. Next, we create a vector store using OracleVS class, and we pass in the embedding model, database connection, table name, and distance strategy. Next, we create a retriever, and we pass in the search type as similarity and search kwargs as k colon 3, which will return top three results.
+
+Next, we create the LLM using ChatOCIGenAI. We pass in the model id, service endpoint, compartment id, auth as required. Next, we create chain using RetrievalQA class, and we pass in LLM retriever. And we set return source document as true, which will help us return the source documents along with the response. And finally, we invoke a chain with our question, and we get a response. Thanks for watching.
+
+[AUDIO LOGO]

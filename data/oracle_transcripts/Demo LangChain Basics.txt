@@ -1,0 +1,33 @@
+In this demo, we will explore a few LangChain components, like models, prompts, chains, and memory. So let us begin with models. We import Chad OCI Gen AI class from LangChain community package, which represents OCI Generative AI service.
+
+This class allows us to invoke generative AI service using LangChain. We create LLM object using chat OCI Gen AI class. We pass in the model name. We pass in the service endpoint, which is a network access point for generative AI service in a specific region.
+
+We pass in the compartment ID. We also pass in the max tokens as 200, because we want to limit the output of the LLM. So let us execute this cell.
+
+What we do next is, we call upon the invoke method of the LLM. And we pass in the question that we want to ask. We also pass in a temperature parameter, which decides the creativity of the output. And we print the response from the LLM.
+
+So let's execute and see what happens. We got back the response from the LLM. And it is a fact about the space.
+
+Next, what we will do is we will learn to use a prompt. For that, we create a template. Template is a formatted Python string, where we can combine a fixed text, as you can see here. And the variable text, which you can capture at the runtime, will create an instance of the prompt template. And we declared two input variables-- user input and city. And we pass in the formatted template as well.
+
+We can get a prompt value by calling upon invoke method on the prompt and giving the necessary inputs. And what we do here is we print the prompt value. So let us execute and see the results.
+
+So as you can see here, the printed prompt value is the combination of the fixed text that we had given. So this was the fixed text that we had given. And these were the variables that we had passed in. And this is what is combined and we get a prompt value.
+
+What we do next is we chain the prompt and LLM using a pipe operator. So what happens is, the input is given to the prompt, and the output of the prompt is given to the LLM. Then finally, the LLM will respond back. And we call upon the invoke method on the chain object. We pass in the necessary inputs. And we print the response.
+
+So our question was, tell us in an exciting tone about New York. And this is the response we are getting from the LLM. Next, what we do is we use the chat prompt template, which allows us to use a list of messages. Similarly, we call upon the invoke method of the chat prompt. So as we can see here, the prompt value is a list of messages in this particular case.
+
+What we do here is, once again, we chain the prompt and the LLM. And we invoke a chain by giving a input. In this particular case, the input is, what's the New York culture like? And we print the response. So once again, we can see the response here.
+
+Next, we will learn to use memory. For that, we import conversation buffer memory and conversation chain. And we create an instance of the conversation buffer memory. And we create an instance of the conversation chain by passing in the LLM and the memory to it.
+
+What we do here is we invoke a conversation with a question. And we print the contents of the memory. So this is the result of the first print, where we are showing the results of the invocation of the conversation. So here, we can see whatever input we are given. There is no history because there was no prior question. And this is the response.
+
+And these are the memory contents. So this is the question that we had asked. And this is what the AI, that is the LLM, and responded back with it.
+
+What do we do next is, we ask another question-- can you tell what is my name? So we expect the conversation to remember that the name is Hemant. So once again, this is the result of the invocation of the chain.
+
+And in the history, we can see that the first question was, Hello, my name is Hemant. And this is the response that LLM had given for the first question. And these are the memory contents, which is a question and the response to our first question. This is our second question. And this is the response that we got back from the LLM.
+
+And the response is, Certainly, Hemant. Your name is Hemant. So this means that the LLM remembered the first question and responded based on this. Thanks for watching.

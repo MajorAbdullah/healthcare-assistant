@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Clock, TrendingUp, LogOut, CalendarDays, UserCircle, BarChart3, User } from "lucide-react";
+import { Calendar, Users, Clock, TrendingUp, LogOut, CalendarDays, UserCircle, BarChart3, User, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import api, { type Appointment, type DoctorStats } from "@/lib/api";
 
@@ -70,6 +70,34 @@ const DoctorDashboard = () => {
       setTodaySchedule([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleApprove = async (appointmentId: number) => {
+    try {
+      const result = await api.appointment.approve(appointmentId);
+      if (result.success) {
+        toast.success("Appointment approved and patient notified!");
+        loadDashboardData(doctorId);
+      } else {
+        toast.error(result.message || "Failed to approve appointment");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to approve appointment");
+    }
+  };
+
+  const handleReject = async (appointmentId: number) => {
+    try {
+      const result = await api.appointment.reject(appointmentId);
+      if (result.success) {
+        toast.success("Appointment request rejected");
+        loadDashboardData(doctorId);
+      } else {
+        toast.error(result.message || "Failed to reject appointment");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reject appointment");
     }
   };
 
@@ -184,7 +212,9 @@ const DoctorDashboard = () => {
                   todaySchedule.map((appointment) => (
                     <div 
                       key={appointment.appointment_id}
-                      className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
+                      className={`flex items-center gap-4 p-4 rounded-lg border ${
+                        appointment.status === 'pending_approval' ? 'bg-amber-50 border-amber-300' : 'bg-card'
+                      } hover:shadow-md transition-shadow`}
                     >
                       <div className="w-20 flex-shrink-0">
                         <div className="text-sm font-semibold">{appointment.start_time}</div>
@@ -194,27 +224,61 @@ const DoctorDashboard = () => {
                         <div className="text-sm text-muted-foreground">{appointment.reason || "Consultation"}</div>
                       </div>
                       <Badge 
-                        variant={appointment.status === "completed" ? "default" : "secondary"}
-                        className={appointment.status === "completed" ? "bg-success" : ""}
+                        variant={
+                          appointment.status === "completed" ? "default" : 
+                          appointment.status === "pending_approval" ? "outline" : 
+                          "secondary"
+                        }
+                        className={
+                          appointment.status === "completed" ? "bg-success" : 
+                          appointment.status === "pending_approval" ? "bg-amber-100 text-amber-800 border-amber-300" : 
+                          ""
+                        }
                       >
-                        {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                        {appointment.status === 'pending_approval' ? 'Pending Approval' : 
+                         appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                       </Badge>
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => navigate(`/doctor/patients/${appointment.user_id}`)}
-                        >
-                          View Details
-                        </Button>
-                        {appointment.status === "scheduled" && (
-                          <Button 
-                            variant="default" 
-                            size="sm"
-                            onClick={() => navigate(`/doctor/patients/${appointment.user_id}`)}
-                          >
-                            Add Notes
-                          </Button>
+                        {appointment.status === "pending_approval" ? (
+                          <>
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleApprove(appointment.appointment_id)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => handleReject(appointment.appointment_id)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => navigate(`/doctor/patients/${appointment.user_id}`)}
+                            >
+                              View Details
+                            </Button>
+                            {appointment.status === "scheduled" && (
+                              <Button 
+                                variant="default" 
+                                size="sm"
+                                onClick={() => navigate(`/doctor/patients/${appointment.user_id}`)}
+                              >
+                                Add Notes
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

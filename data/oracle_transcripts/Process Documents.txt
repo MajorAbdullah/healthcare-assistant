@@ -1,0 +1,17 @@
+In the previous lesson, we discussed that RAG pipeline consists of ingestion, retrieval, and generation. Now let us discuss each of these in detail. We will begin with ingestion. The first step in ingestion is to load documents. The documents can come from a variety of sources and have multiple formats. The documents can be PDFs, comma-separated values, HTML, JSON, and many other types.
+
+Most of the LLM frameworks, including LangChain, offer classes to load different types of documents. The loader classes also support loading just a single document or all the documents in a given directory. Once the documents are loaded, the next step is to split the documents into smaller pieces, also referred to as chunks.
+
+There are a few things to consider while splitting the documents. Let us understand each of these. First, consideration is the size of the chunk. That is how big or small the chunk should be. Most of the LLMs have a maximum input size constraints, so the maximum size of the chunk is limited by the context window of the LLM.
+
+If we split the document into smaller chunks, it helps to fit the documents in the context window of the LLM. But note that if we make chunks too small, they may not be semantically useful. And if we make them too big, they may not be semantically specific.
+
+Next consideration is to maintain the continuity of the context from one chunk to another. For this, we include a part of the preceding chunk into the next chunk. This is referred to as chunk overlap. So if we consider just one chunk, it also has some reference to the previous chunk. This helps improve the continuity of the context.
+
+The next consideration is how do we split the document, given the chunk size to keep the chunks semantically meaningful. If we consider a block of text, usually it already has a semantic structure. For example, a paragraph may explain a concept, and then each sentence in a paragraph may be semantically meaningful. Text splitter also uses similar concept. They try to split the block of text using separators like paragraph separator or sentence separator or even a word separator.
+
+So to get a chunk of a given size, text splitter first tries to retain paragraphs-- if not, at least sentences together-- and so on. The idea is to get the chunks of a given size, but also to get semantically richer chunks. Let us go through sample code to load and split a PDF document. Here we use PDF reader class to read a PDF document.
+
+Once we have a reader object, we can use it to extract text from all the pages of the PDF and get a text variable. Next, we create a text splitter object. We pass in the chunk size and chunk overlap parameters to the text splitter object. Next, we call upon the split text method of the text splitter object to get chunks from a text variable we created earlier. Thanks for watching.
+
+[AUDIO LOGO]

@@ -1,0 +1,57 @@
+In this demonstration, we will see how to use RAG that is Retrieval Augmented Generation with Oracle 23ai. For that, we will begin with the creation of autonomous database. We are logged in into the console of autonomous database. And we will click on Create Autonomous Database.
+
+Here, we will provide the display name and the database name. And both can be same as well. And we'll also make sure that we are selecting the appropriate compartment. We'll choose the data warehouse, type of workload. And we will choose the deployment type as serverless.
+
+In the Configure the Database section, we will leave all the default values as is. In the Create Administrator Credentials section, we will provide the password for the admin user. We will choose the secure access from allowed IPs, and we will choose our own IP.
+
+And we will leave the required mutual TLS, that is mTLS authentication unchecked. If you want to know more about mutual authentication, you can learn using this link. And rest of the things, we will leave as default and click on Create Autonomous Database.
+
+Once the database is created, we can check the access control list here, and we can see that our IP has been whitelisted here. If we choose the database connection, we can copy the connection string for our database. And we will require this connection string when we connect to this database using oracledb Python library.
+
+Now let us see how to implement retrieval augmented generation with Oracle 23ai. So for that, we begin with the import of necessary classes. Next, we declare the username, and the password, and the data source name for the Oracle 23 database that we have created.
+
+Next, we connect to the database using the oracledb Python library and we use the connect method, passing the username, password, and the data source name to it. Once we get a successful connection, we create a PdfReader object.
+
+And we use that PdfReader object to read the document that we have passed in to the reader. So we scan through all the pages and extract the text from that page and create a text object out of it.
+
+Next, what we do is we create a text character splitter object. So we pass in the separator chunk_size and the chunk_overlap as parameters to it. So separator decides how the text is split.
+
+So if we have given the separator as full stop, that means whenever the character text splitter encounters the full stop, it is going to split the text over there. And if it doesn't encounter a full stop, then it will basically go till the chunk_size that we have specified, and then it will split the text.
+
+The chunk_overlap basically ensures that the context is maintained from one chunk to the another. So once we have split the text into the chunks, what we do next is actually we need to convert the chunks into the documents which are ingestible into the Oracle Vector Store.
+
+So we have to create a document object out of the chunks that we have. So for that, what we do is we have declared a function here, and we pass a dictionary object to it. So from the dictionary object that we pass, the metadata is going to be extracted, and the document object is going to be created out of it using the metadata that is created and the text.
+
+Now, what do we do next is actually, we enumerate through all the chunks, extract the page number and text from it, and then basically create a dictionary object from this page number and the text object that we have extracted. And we basically pass it to the chunks_to_docs_wrapper, which is going to return a document to us.
+
+So next, what we do is we declare the COMPARTMENT_OCID. We create a embedding model out of the OCIGenerativeAIEmbeddings object. We pass in the model_id. We pass in the service_endpoint and the compartment_id.
+
+So finally we use the Oracle Vector Store objects and use the from_documents method. We pass in the documents that we had created. We pass in the embed_model that we had created. And this is a connection objects that we had created earlier. And we specify a table_name.
+
+Now what's going to happen with the table_name is, the documents that we have provided, they will be embedded. And then those documents will be stored into the table that we are specifying here. And the distance_strategy is specified for calculating the distance between the two embedded document.
+
+At the end of the execution of this code, what we are going to get is, we will be getting the documents embedded and stored into the Oracle Vector Store. So let's run the code and see what happens.
+
+So as we can see here, our PDF has been transformed into the text format, and it has been stored into the Oracle Vector Store as well. We have connected to the database using Oracle SQL Developer. We can see our table here.
+
+So there are four columns in it. So this is a primary key column. This is a Text column. This is a Metadata column. And this is Embedding column. And this is how the data looks like. So essentially, we have a primary key here. We have the text here. And we have the metadata here. And we have the embedding here.
+
+Now that we have created the Oracle 23 Vector Store for us, what we will do is we will connect to the vector store and run some queries. So for that, we'll begin with the import of the classes. We will also declare the username, password, and the data source name.
+
+We will connect to the database or using oracledb Python library, and we will use the connect method. We will create the ChatOCIGenAI object using the model_id, service_endpoint, compartment_id, and a couple of other model_kwargs, like "temperature" and "max_tokens."
+
+And we'll also create a embed_model using OCIGenAIEmbeddings. We'll pass in the model_id, service_endpoint, and our compartment_id here as well.
+
+Next, we'll create a template using which we can create the context that is our retrieved documents and the user questions and we will create a prompt using the template. So we will create the vector store object using the OracleVS Python class. And we will pass in the embedding function, the connection object, and the table name.
+
+So we already have populated this table when we embedded and stored the documents into the Oracle Vector Store. And we'll also pass in the distance_strategy here, which will be used to calculate the similarity between two vectors.
+
+Next, we'll create a retriever out of this vector store that we created. And we will use the search_type of "similarity." And we'll also use the search_kwargs, which specifies that we'll be using the top three documents.
+
+Next, we create a chain. And if you notice, we are passing this retriever as a context because retriever essentially is going to be containing all the retrieved documents here. And we are passing in the user question as it is to the prompt. And for that, we are using this RunnablePassthrough.
+
+And finally, we create a user_question, and we invoke a chain with that particular user_question. And we print the user_question and LLM response. So let's go ahead and run this code. So as you can see, this was our question here. "Tell us about Module 4 of AI Foundation Certification Course."
+
+And the response is, "According to the provided context, Module 4 of the AI Foundation Certification Course is about Generative AI and LLMs," which is the right response.
+
+We have seen how to take a PDF document, how to split it, how to store it in the Oracle Vector Store. And we have seen how to retrieve the documents from the Oracle Vector Store, which are matching the query. And we have also seen how a question can be answered based on the retrieved document.

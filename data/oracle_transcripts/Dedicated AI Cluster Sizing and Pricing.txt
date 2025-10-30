@@ -1,0 +1,59 @@
+Welcome to this lesson on dedicated AI clusters, sizing, and pricing. Here, the focus is to look at how you can size these clusters and how you can price these clusters. I have an example, which will walk you through how the pricing is done for these dedicated AI clusters. So let's get started.
+
+Before we dive deeper into sizing and pricing, the first thing to understand is what are the different cluster unit types. There are four cluster types or cluster unit types which you can use in generative AI service today.
+
+So the first one is called large Cohere dedicated. And using this cluster type, you can do both fine tuning and hosting but limited to Cohere Command R family. And you can see a couple of models, which are supported as of today's recording. When you are listening to this lesson, it might happen that you have fewer models supported or a newer set of models supported, so you should always check the documentation to see what kind of models are supported. So the first one is large Cohere dedicated.
+
+The second one is a small Cohere dedicated unit type. And here again, you can do fine tuning and hosting for Cohere command R models. And it supports a couple of models, which are shown on the screen here.
+
+The third unit type is for embedding. And this is again for Cohere. So you have embed Cohere dedicated. And as you know, there is no fine tuning of these embedding models. We don't kind of support that. Most of the LLM providers actually don't support fine tuning these embedding models. But we can host these embedding models and it supports Cohere English and multilingual models to be three of those models and also supports the Lite flavors of these models.
+
+And finally, the fourth unit type is large meta dedicated unit type. And this can be used for fine tuning and hosting of Meta Llama models. And you can see the models which are supported, Llama 3.3, 3.1, 70 billion parameter models, Llama 3.2 Vision models, both 11 billion parameter and 90 billion parameter.
+
+And in the previous family of Llama 3.1 model with 405 billion parameters. So these are all supported using meta dedicated large meta dedicated unit type.
+
+So the thing to keep in mind is you have these four unit types. And if you are using Cohere models, you would be running either large Cohere or small Cohere models, whether if you are fine tuning or hosting these or customizing these. If you are using embedding, you would be using this dedicated AI cluster type.
+
+If you are using Llama models, you will be using the large meta dedicated unit type. You will not mix match, so these are clearly defined. This is for Cohere, these three. And then this one is dedicated for Meta Llama models.
+
+Now let us look at how they are used in practice. Now one of the things which I want to mention here is you see in parenthesis there are these long texts which kind of are the SKU names or the service limit names. So there is dedicated-unit-large-cohere-count, dedicated-unit-small-cohere-count, and so on and so forth.
+
+The idea is by default, these service limits are zeroed out in your tenancy. And you have to ask for-- do a service limit increase request in order to get these provisioned or enabled in your account. And these are the actual service limit names, which you would use in order to ask for a service limit increase.
+
+All right, so now let's look at how the sizing is done for each of these model types. So suppose we are using a capability for chat and we are using the Cohere command R-plus 08-2024 as of this recording. This is the latest and greatest model which is available as part of the OCI Generative AI Service.
+
+So today, we don't support fine tuning of this model. But if you want to host this model, you need two units of large Cohere dedicated. And as I said, dedicated-unit-large-cohere-count is zeroed out. So you would ask for a service limit increase. And you ask for two units of this particular service limit in order to host this particular model.
+
+Another model from Cohere, which is supported today in the service, is Command R 08-2024. Now we support both fine tuning and hosting for this model type. So for fine tuning, you require 8 units. But now you require small Cohere dedicated units not large Cohere dedicated. And for hosting, again you require small Cohere dedicated. So here, you have large Cohere, you have small Cohere dedicated.
+
+And why do we need that? What are the underlying parameters? All that complexity kind of is not exposed to the customers. And this is in this lesson, we are not going to cover how many GPUs you get, the GPU pool and parameters and things like that. But just remember, there is a large and a small dedicated unit.
+
+On the other hand, if you are using any of the Meta Llama models, 3.3 or 3.1, and you want to fine tune those, you can use the large meta dedicated units, but you need four of those units for fine tuning. And for hosting, you would just need one of those units.
+
+And last, if you are using embedding models, whether you are using the Cohere English embedding models or multilingual embedding models, you would require one unit for embed hosting these embedding models and one unit of embed Cohere dedicated. And like I said in the previous slide, there is no fine tuning concept for these embedding models. It's not supported.
+
+Now let's look at an example. Suppose you want to fine tune a Cohere command R 08-2024 model, this particular model we discussed here. So in that case, you would need eight small Cohere dedicated units for fine tuning. And for hosting this fine-tuned model, you need a minimum of one small Cohere dedicated unit. So in total, you require eight small Cohere dedicated units here and one small Cohere dedicated unit here, so require nine units.
+
+And again, as I said previously, if your service limits are zeroed out, so when you ask for service limit increase, you will ask for dedicated unit small Cohere count to change to 9 or increase to 9, so you can do both fine tuning as well as hosting of this particular model.
+
+Now let's conclude this lesson by looking at a dedicated AI cluster pricing example. Now let's say we have an actor here, Bob, who wants to fine tune the same model we saw on the previous slide, Cohere Command R 08-2024 model. And after fine tuning, he wants to host this custom model in the service.
+
+So he creates a fine-tuning cluster. And as we saw in the previous slide, for fine tuning this particular model, you require eight small Cohere dedicated units. Now the fine tuning job doesn't have to go for 24/7. It can take a few hours. In his case, it takes five hours to complete. In our case, it could be longer or shorter.
+
+So he creates-- he does this once a week and he does this once a week for the entire month. So he creates a cluster. He does a fine tuning and he does that once every week and four times in a month.
+
+But then when he creates these fine tuned models, he hosts them for the entire month. So this is his requirement. Now let's look at some of the service minimum commitment required. So for hosting, the minimum commitment is you host the model for the entire month. So you see 744 unit hours. Basically, that means that you cannot do partial hosting. If you host a model, you're hosting it for the entire month.
+
+On the other hand, the fine tuning commitment is only for how long the fine tuning takes. So minimum is one hour. But if it takes five hours, you only need for five hours. You don't need for 744 hours. So minimum, you have to spend an hour. It cannot be partial hours. It cannot be like my fine tuning takes 30 minutes. You will still be charged for the entire hour, but after that, it's every hour gets added.
+
+So now let's look at his particular requirements. So fine-tuning cluster requires eight units, as we discussed for this particular model. Some other model, it could be something else. And each cluster is active for five hours. So total, he requires 40 unit hours for fine tuning.
+
+Hosting, as we said, runs for the entire month. So you require 744 unit hours. And you can host multiple models in the same cluster as we have looked at in the previous lessons.
+
+So for fine tuning, the monthly cost would be-- this is your weekly cost, 40 unit hours. You multiply that by 4, and then you multiply that by the price of the dedicated unit small Cohere count price, whatever that price is. So 40 in to 4. And similar to that for hosting, it's quite straightforward, 744 unit hours you are spending. So you multiply that by dedicated unit small Cohere count price.
+
+And then the total monthly cost is 160 plus 744. So that comes to 904 multiplied by dedicated unit small Cohere count price. Kind of missing the price word here. And so today, you can go and look up this information on the web. I believe this particular SKU goes for $6.50. And that's the price we publish on the website.
+
+So if you do the math, multiply 904 by $6.50, comes out to somewhere around $5,900. So in Bob's case, if he wants to fine tune and host these models on the dedicated AI cluster, you're looking at somewhere close to $6,000 cost for the entire month.
+
+So this hopefully gives you a quick understanding of how these clusters are sized and how these clusters are priced. And of course, you should always look up the latest pricing and information documentation, because some of the things might change when you are watching this particular lesson. I hope you found this lesson useful. Thanks for your time.

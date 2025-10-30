@@ -1,0 +1,89 @@
+MUSIC PLAYING]
+
+Hello. And welcome to this demo on generative AI agent. In this demo, we will create a generative AI agent based on object storage data store. So once you are logged in into your OCI account via cloud.oracle.com, you can see, I have chosen Frankfurt region, as the service is available in specific regions. You can check the documentation to learn about the regions where this service is available using docs.oracle.com.
+
+So first of all, let's click on the Navigation menu, go to Analytics and AI, and then click on Generative Agents under AI Services. It will get you to the Generative AI Agents overview page.
+
+Since we are familiar with the concepts around this topic, let's go through what the process looks like. So usually, it revolves around three steps, which you can see here. The first one is creating a knowledge base. Second one is creating an agent. And third and final one is testing and then chatting with the agent.
+
+So we will start with creating a knowledge base. So let's click on the knowledge bases from here. You can see two of the knowledge bases created earlier. And they are listed over here. Let's click on Create Knowledge Base.
+
+A knowledge base is the base for all the data source that an agent can use to retrieve the data for its chat answers. So here, we will enter a name first. So for this demo, I will enter demo-kb, which represents knowledge base. Once you have provided a name, you can then select a compartment where you have defined appropriate policies to use this particular service.
+
+You can also provide a description, although which is optional here. I will leave this as blank. For this demo, we will use object storage as the data store type. So the other two are OCI OpenSearch and Oracle AI Vector Search. For this one, I'm choosing Object Storage.
+
+Let's enable hybrid search, which is a combination of lexical and semantic search. Lexical search basically finds matches based on exact words, characters, or phrases, and is based on keyword-based match. Semantic search finds matches based on meaning and intent, and typically uses vector search.
+
+Hybrid approach combines these two. Many modern applications, such as this agent, combines both approaches using RAG, which is retrieval augmented generation, where lexical search retrieves initial candidates and semantic search refines the result for relevance.
+
+If you do not select this option, you get lexical search only. Now, we need to define our data source. You can have only one data source per knowledge base by default. A data source points to the source of the data. After you add a data source to a knowledge base, you must ingest the data sources data so agents using the knowledge base can reach that data.
+
+In generative AI agent service, by data source, we mean the service managed OCI Object Storage files, where you can have up to 1,000 text and PDF files of 100 MB each. So let's click on specified data source, which will open a box here.
+
+For the name, we will, again, type demo and then data source for object storage. Again, you can write a description. For this demo, I will just leave this as it is.
+
+Another thing is, you can choose to enable multimodal parsing. So you can select this option to parse and include information from charts and graphs in the documents. Then for the data bucket, I can select a bucket of my own choice. For this demo, I will use Gen AI agents, which is a bucket, which I had defined earlier. So now, I will just show you the bucket.
+
+So this is how the bucket looks like. Again, this bucket is defined in the same compartment. So Gen AI Agents, let's click on this bucket. As this is a professional level course, I expect and assume that you all know how to create a bucket and upload objects to it.
+
+So for this demo, we will particularly depend upon these two files. The first one is faq.txt. And the other one is oci-ai-foundations.pdf. The first file is a collection of frequently asked questions related to OCI. And the second file is a transcript from our OCI AI foundations course.
+
+Also keep in mind, only PDF and text files are supported at this point. We have also seen object storage guidelines in the previous lessons.
+
+OK. So let's go back to generative AI agents. So I have selected here Gen AI agents. And then I will select these two files to create our knowledge base using these data source.
+
+Then I will click on Create. So after I have specified the data source, I will select this checkbox to start the ingestion job for this data source and add the data to this knowledge base. After a data ingestion job runs for an object storage data source, you can also review the status logs to confirm that all updated files were successfully ingested.
+
+If the ingestion job fails, for example, because a file was too large, you can then address the issue and restart the job. Also, when you restart a previously run ingestion job, the pipeline detects files that were successfully ingested earlier and skips them. The pipeline will ingest only files that failed previously and has since been updated. For example, you have 20 files to ingest. And the initial job run results in two failed files.
+
+When you restart the job, the pipeline recognizes that 18 files have already been successfully ingested and ignores them. It only ingests two files that failed earlier and have since been updated. Now, let's click on Create.
+
+So when you run an ingestion job, the data source takes a while to create. Once done, as I just told, make sure to check ingestion log by going to the knowledge base and then clicking on Data Source and then on ingestion job. Once this demo-kb, Knowledge Base, is in active state, as I told earlier, you can click on this.
+
+And then on the data source, from there, you can go to the ingestion jobs, click on the jobs, and then check the status logs. You can check and confirm that two files were ingested and processed. Those two files were faq.txt and oci-ai-foundations.pdf.
+
+If you'll go back, you can also see, we have an option to create ingestion job at a later point of time, if not done at the time of creating a knowledge base. Ingestion jobs add files from object storage with the specified prefix to the data source. Also, new ingestion jobs are required whenever files are added or removed from the object storage bucket.
+
+You can also cancel an ongoing ingestion job. So under Data Ingestion, you can click on the Actions menu. And for the ingestion job that you want to cancel, and then click Cancel. Here, you can see the lifecycle status, Succeeded. So you can't cancel this. You can cancel the ingestion job only, which are in progress or waiting states.
+
+So few other things to keep in mind while dealing with the knowledge base. As I said earlier, you can only have one data source per knowledge base. You can update a data source with new data instead of deleting and adding a new one. If you decide to delete a data source, we recommend that you review the data sources content first.
+
+You can only delete knowledge bases that are not used by agents. Before you delete a knowledge base, you must delete the data sources in that knowledge base and then delete the agents using that data source. The Delete action permanently deletes the knowledge base, and this action can't be undone.
+
+You can always delete data sources that are used by agents. While the agent continues to run, it no longer answers questions related to the sources that you deleted. The Delete action permanently deletes the data source, and again, this action can't be undone.
+
+So let's move on to creating an agent. Once the agent is created, and in an Active state, you can click on the agent, and then click on endpoints from the Resources section. Since we have asked the service to create an endpoint, you can see that it has created one for us. If you click on this, you will see also that the trace, citation, and session options are enabled by default, but it hasn't enabled the content moderation on both input and output. These are false.
+
+Let's go back to this endpoints option. Now, if you haven't provided that option to create automatically create an endpoint by default, you can always come here and click on Create Endpoint. You can provide a name.
+
+Now, there is an option to enable session. Enable session keeps the context of the chat session. Another thing to keep in mind, if you enable session, you can specify the idle timeout period in seconds. The default timeout is 3,600 seconds, as you can see here. This is one hour.
+
+This means that after the lack of activity between the user and agent for one hour, the session automatically ends. And the following conversations do not retain the context of the previous conversation. You can, again, set it as low as one hour and as high as seven days.
+
+For content moderation, you can select whether the content moderation is applied only on input or output, or both. Here, you can see, both the check marks are there, allowing for both input and output.
+
+You can select this particular box to enable trace. So it basically tracks and display the conversation history, including both the original prompt and the generated response during the chat conversation. If you don't enable this feature now, you can, again, always add it later by editing the endpoint.
+
+Similarly, for citations, which display the details about the source of information for each of the chat response, you can, again, edit this option and add it later by editing the endpoint. If you haven't, enable this feature at the time of creation of this endpoint. And then you will click on the Create option. So this should create an endpoint for you if you haven't automatically done during the agent creation stage. I'll click on Cancel here.
+
+Now, I can show you, if you click on this endpoint and then click on this Edit option, as told earlier, you can always edit these, the content moderation, trace, citation. Also, the timeout, what you want to enter.
+
+Keep in mind, there is a difference in enabling the session details, and just changing the timeout period. So if you haven't enabled this session details, you won't even be able to change this timeout period. Anyway, I will check mark these two options. And I will save the changes.
+
+This will now update this particular endpoint. Once this endpoint is updated, it will, again, be in Active state. You can always launch a chat directly from here by clicking on launch chat on agents page or you can go back. And under Generative AI Agents, click on Chat. We will select an agent to chat with. In our case, demo-agent.
+
+And then we will select an endpoint associated with this particular agent. Since we created only one, we will select this endpoint. Now, if you remember from earlier, we had provided this welcome message for this agent.
+
+Hi user, I am an AI Assistant. I can help you with answering questions and providing information based on AI Foundations course and Oracle FAQs. How can I help you?
+
+Let's ask a few questions. So let's ask, please tell me about Oracle free tier. Now, we can see a response. Indeed, this is a detailed response.
+
+Also, we can view the citations and traces. As I told, the citations are nothing but the source, where this answer was taken from. So for example, it has the title, again, object storage path, the document ID, and the source text. You can see multiple sources here.
+
+Similarly, for traces, you can see the question, the source is retrieved, and the generated text here. Let's ask our next question on the another document. So I'm going to ask, how many modules are there in Oracle AI foundations course? And submit it.
+
+OK. So it says, Oracle Foundations course is split into six modules. Again, you can see the citations and traces. Let's ask another question, who are the instructors for this course?
+
+So you can see the name of the instructors over here. Again, you can view the citations and related trace. Another thing to note is, again, this is a session-based chat and has the memory. So in the next question, I haven't explicitly specified which course, but the chat understand, this agent understands that I'm asking a question related to the earlier asked question, which was Oracle AI foundations course.
+
+So this finally concludes our demo, where you created a knowledge base using an object storage as a data source. You then created an agent using this knowledge base. And then you successfully chat with this agent using the agent endpoint.

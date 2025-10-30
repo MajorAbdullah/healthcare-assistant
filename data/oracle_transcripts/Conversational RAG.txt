@@ -1,0 +1,7 @@
+So far, we discussed what RAG is and how RAG pipeline is implemented. We now understand how RAG helps us improve the context of our query by retrieving relevant documents and sending these to the LLM for getting more relevant and specific response to our query. RAG is used often to create chatbots.
+
+Chat is a series of question and answers. A user will ask a question. LLM will provide an answer. And then user will follow up with a next question and so on.
+
+RAG is used to answer the questions by using the relevant information from the provided text corpus. In case of a chat, even the prior questions and answers may act as an additional context to the next question. For example, if we ask, tell me about Las Vegas, and the next question is, tell me about its typical temperature throughout the year, the second question is referring to Las Vegas.
+
+In order to maintain a list of question asked and answers given, a concept of memory is used. The contents of the memory are updated every time a new question is asked and an answer is generated. The memory contents are passed on as additional context to the LLM. LLM answers the next question considering the retrieved documents and conversation history, LangChain provides a variety of memory and chain classes that help implementing conversational chatbots. Thanks for watching.

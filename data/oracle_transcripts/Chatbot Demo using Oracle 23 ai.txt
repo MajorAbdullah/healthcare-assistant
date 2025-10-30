@@ -1,0 +1,89 @@
+[AUDIO LOGO]
+
+Welcome to this second demo on generative AI agent. In this demo, we will create a generative AI agent based on Oracle Database 23ai data store. Keep in mind, I have already set up necessary policies and permissions. I have also created and configured a VCN and updated the security rules as well. And lastly, I have created a vault to store database secrets.
+
+I'm not going to include these steps in this demo, as this course is a professional level course, and we assume that you have hands-on experience with OCI. But for more information on this setup processes, you can refer to our documentation on docs.oracle.com. You can go here and search for agents, and then you can click on Generative AI agents. Once here, you can read the Getting Access section and then also Oracle Database Guidelines section for further info.
+
+Let's go back and we will start with creating a database. So once you all are logged in into your OCI account via cloud.oracle.com, you can click again on the Navigation menu, go to Oracle Database, and then click on Autonomous Database. Here, click on Create Autonomous Database, and then provide information for compartment, display name, and database name.
+
+So I'll provide demoagent as my display as well as database name. For workload type, I'm going to choose Data Warehouse, and for deployment type, I will keep it as Serverless. Now, for the database version, you have to choose 23ai and let the other things remain as default. Now you can give a password of your preference.
+
+Look here.
+
+So once you have given your password, make sure to select the network access and private endpoint access only. Now I will select the VCN, which I had already created, and then subnet. Also, make sure you do not click on this Require mutual TLS authentication.
+
+Finally, provide a valid email ID and click on Create Autonomous Database. Once the database is created, you will receive an email. Regardless, check this page for your database and make sure that you see your database in available state.
+
+Let's click on this database. Go to Database connection and choose any one of the connection strings. Click on Copy, then close. Make sure you copy this on a Word document. Then under Network section, make sure you choose your private endpoint IP and copy it on the document.
+
+Now we will create a database tool connection. So from Navigation menu, go to Developer Services, and under Database Tools, click on Connections. Once here, click on Create connection. You need to provide a name and compartment information. You also need to choose Oracle Autonomous Database as database cloud service and then provide username as admin.
+
+So let's do all of those steps one by one. So I'm going to use the same name, demoagent. For database cloud service, Oracle Autonomous Database. I will choose just a newly created database. And for username, I'm going to put admin.
+
+Click on Create password secret. Here you, again, need to provide the name, vault, and key, which you would have created earlier. Also, in the user password, provide the same password which you created and used at the time of Autonomous Database creation in the previous task.
+
+So I'll put the same name, demoagent. For vault, I will choose earlier created vault and encryption key. For user password, I will use the same password, which I used during the Autonomous Database creation, and then click on Create.
+
+Once created, you can use the newly created password secret here. So click on demoagent, in my case. We will also modify our connection string, which we had copied earlier. So for retry count 20, we'll make it 3, and we will replace the host with the correct IP address.
+
+Let's copy this string.
+
+In the private endpoint, you can select the private endpoint which you would have created earlier. For the wallet, in the SSL details, let it be None, and then click on Create. Once the database tool connection is created, click on Validate.
+
+If it's successfully connected to your database, it should show a validation connection, Done. Click on Close. Next, we have to load the vector data in the Autonomous Database. So on this page, you need to click on SQL worksheet.
+
+We will run these code blocks one by one. This first code block is for access control list to let user go out everywhere. This is required for Autonomous Database user to access bucket, public link, and GenAI embedding model. I will select this one and run it.
+
+In this next code block, you will create the credentials to access OCI Generative AI Service so you can find these credentials such as user_ocid, tenancy_ocid, private_key, fingerprint in your profile section. This first block is the Database Management System Cloud credential, and the second block is the credentials for your generative AI service. Let's run this one by one.
+
+We will run this code block to test and this should return vector embedding for Hello.
+
+We can see we are using cohere.embed-multilingual-v3.0 for the embedding model. Here, the embedding has been created for the word Hello. And that means we can use generative AI embedding model to create embeddings using the credentials which we provided earlier.
+
+Now we will go back to these buckets in the object storage. You can see here that I had created this bucket, GenAI-Agents, and uploaded a text file called faq.txt. We had also used this particular file in the previous demo. We will now create a preauthenticated request link to access this text file.
+
+So click on Create Preauthenticated Request object. And then I'll just change the dates and then create preauthenticated request. I'll copy this link, go back to the SQL worksheet. Now this code block will divide the blob into chunks using this utl_to_chunks function.
+
+And at the end, it will create a table, ai_extracted_data. And we will have some particular columns as our fields-- chunk_id, chunk_offset, chunk_length, and chunk_data. The link which we just copied we will paste it here.
+
+And now we will run this code block.
+
+So it says the TABLE_AI_EXTRACTED_DATA has been created. Let's check this table.
+
+So we can see chunk_id, chunk_offset, chunk_length, and chunk_data. Let's run this code block to create the vector table.
+
+So this AI_EXTRACTED_DATA_VECTOR table has been created. Now we will insert the data into this table. Again, see here that for the embedding model we have used cohere.embed-multilingual-v3.
+
+So this vector table has been created.
+
+You would have remembered this function from our first lesson in this module where we created this retrieval_func_ai function. Let's run this code block.
+
+You can see that the function retrieval_func_ai has been compiled. You can also run and check the function with this code block.
+
+You can see I'm also running a query to check that function-- Tell me about Oracle Free Tier Account, and only top 10 results will be included. So if you will expand this, you can see there are total of 10 results here.
+
+Since all of these steps are completed, you can always refresh this and open these tables to see what kind of data is stored there. For example, if I open this AI_EXTRACTED_DATA_VECTOR table, you can see here the data.
+
+So whatever data I had in my faq.txt file, those has been chunked and vectorized. And you can see the body or the content and the corresponding vector embedding. So we now have a vector database. So we can close this and move back to the agents.
+
+So again, go to Analytics and AI, and then Generative AI Agents. We will now follow the same steps or similar steps what we did for the object storage. So click on the Knowledge Bases, then create knowledge base, provide a name, demo, and then knowledge base.
+
+This time we will select Oracle AI Vector Search as our data store type. For database tool connection, we will select demoagent, which we had created. We can again test our connection, which is successful. For the vector search function, we had created a RETRIEVAL_FUNCTION_AI. So we will select that, and then click on Create.
+
+So this will initiate our knowledge base creation. It should take some time. Knowledge base has been created as an active lifecycle state. So we'll click on agents and then click on Create agent and put a name here. So demo-agent.
+
+And then for the welcome message, if I leave it blank, this message will be shown. In our case, I can put something like, Hi user, I am a chatbot for Oracle FAQs. Please ask me related questions.
+
+I'm going to leave these instructions for RAG as it is. And then I will select the knowledge base which we had created earlier. And here, we will check mark this for automatically creating an endpoint for this agent, and then click on Create.
+
+So you will see License Agreement and Acceptable Use Policy. Accept that and click on Submit. And this will successfully initiate the agent creation as well as agent endpoint creation. This agent is now active. So let's go to the chat.
+
+Select agent created in the previous task from the dropdown, which is demo-agent. Also, select the endpoint associated with that agent. Now you can see the message which I had put earlier-- Hi user, I am a chatbot for Oracle FAQs. Please ask me related questions. I will type a question, Tell me about Oracle Free Tier.
+
+You can see we have a response now with citations and traces. So traces has the input as well as the output, and the citations quotes different documents where this answer was found.
+
+So this concludes the demo. We created an Autonomous Database and a database connection tool. We then load vector data using SQL and created a vector table. Then we created a knowledge base, an agent, an endpoint, and did chat with the created agent.
+
+I didn't delve into the details of the SQL since the demo is more about the OCI Generative AI agent services itself, and how you deal with the data is your own choice, but I will definitely recommend our Oracle Database 23ai course if you are interested any further. Thanks for joining.
+
+[AUDIO LOGO]
