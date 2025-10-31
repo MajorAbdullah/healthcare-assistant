@@ -1,3 +1,0 @@
-[AUDIO LOGO]
-Welcome to this module on OCI Generative AI service. In this module, we are going to look at the core capabilities of the service. First, we will look at the pre-trained foundational models around generation summarization and embedding.
-Then, we are going to look at prompt engineering and ways you can customize LMS with your own custom data. Then, we are going to look at tuning and inference, look at fine-tuning configuration, dedicated AI clusters, and will conclude the module by looking at the generative AI security architecture. There is a lot to cover, so let's go.

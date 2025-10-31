@@ -1,7 +1,0 @@
-[AUDIO LOGO]
-
-Hi, everyone. My name is Ari, and I'm going to be taking you through module 1 in this Generative AI Certification, which provides a tour of large language models. In this course, we'll be covering the basics of large language models. We'll begin by covering what large language models are, what they do, and how they work, all at a technical level.
-
-Then we'll touch on various prompting techniques that are commonly utilized to encourage LLMs to generate text with specific characteristics. We'll talk about training and decoding, which is the technical term for generating text with LLMs. Along the way, we'll also touch on some dangers associated with deploying LLM-based technologies, which include things like prompt injection and hallucination.
-
-Finally, we'll wrap up with covering some related cutting edge topics that are still being developed in academia, as well as industry. It's my hope that in these lessons, you will be provided with an introductory, yet technical understanding of large language models so that you can start experimenting with them on your own. No special knowledge or background is required for these lessons. So anyone who's interested should be able to follow along. With that, let's jump on in.
