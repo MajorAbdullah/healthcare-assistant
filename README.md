@@ -1,41 +1,67 @@
-# 🏥 Healthcare Assistant - AI-Powered Medical Platform
+# Healthcare Assistant - AI-Powered Medical Platform
+
+[![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![Google Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 A full-stack healthcare management system with AI-powered medical assistance, appointment scheduling, Google Calendar integration, and intelligent approval workflows.
 
-![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+---
 
-## ✨ Features
+## Table of Contents
 
-### 👨‍⚕️ Doctor Portal
+- [Features](#features)
+  - [Doctor Portal](#doctor-portal)
+  - [Patient Portal](#patient-portal)
+  - [AI Capabilities](#ai-capabilities)
+  - [Appointment Workflow](#appointment-workflow)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [API Documentation](#api-documentation)
+- [Project Structure](#project-structure)
+- [Key Features Explained](#key-features-explained)
+- [Security Features](#security-features)
+- [Testing](#testing)
+- [Additional Documentation](#additional-documentation)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
-- 📊 **Comprehensive Dashboard** - Real-time statistics and analytics
-- 📅 **Appointment Management** - View, approve, and manage patient appointments
-- 👥 **Patient Records** - Access complete patient history and medical notes
-- ✅ **Approval Workflow** - Review and approve/reject appointment requests
-- 📈 **Analytics** - Detailed insights into practice performance
-- 🔄 **Google Calendar Sync** - Automatic synchronization with Google Calendar
+---
 
-### 👤 Patient Portal
+## Features
 
-- 🔐 **Secure Authentication** - Email and phone-based login
-- 📅 **Smart Booking** - AI-powered appointment scheduling with conflict detection
-- 🚫 **Double-Booking Prevention** - Real-time slot availability checking
-- 💬 **AI Medical Assistant** - Chat with RAG-powered medical AI for health queries
-- 📧 **Calendar Invitations** - Automatic Google Calendar invites on approval
-- 📱 **Responsive Design** - Works seamlessly on desktop and mobile
+### Doctor Portal
 
-### 🤖 AI Capabilities
+- **Comprehensive Dashboard** - Real-time statistics and analytics
+- **Appointment Management** - View, approve, and manage patient appointments
+- **Patient Records** - Access complete patient history and medical notes
+- **Approval Workflow** - Review and approve/reject appointment requests
+- **Analytics** - Detailed insights into practice performance
+- **Google Calendar Sync** - Automatic synchronization with Google Calendar
+
+### Patient Portal
+
+- **Secure Authentication** - Email and phone-based login
+- **Smart Booking** - AI-powered appointment scheduling with conflict detection
+- **Double-Booking Prevention** - Real-time slot availability checking
+- **AI Medical Assistant** - Chat with RAG-powered medical AI for health queries
+- **Calendar Invitations** - Automatic Google Calendar invites on approval
+- **Responsive Design** - Works seamlessly on desktop and mobile
+
+### AI Capabilities
 
 - **RAG Engine** - Retrieval-Augmented Generation for accurate medical information
 - **Google Gemini Integration** - Advanced AI model for natural conversations
 - **Medical Knowledge Base** - Vector database with curated medical documents
 - **Contextual Responses** - AI remembers conversation history for better assistance
 
-### 🔄 Appointment Workflow
+### Appointment Workflow
 
 1. Patient selects doctor and time slot
 2. System checks for conflicts (including pending approvals)
@@ -48,34 +74,42 @@ A full-stack healthcare management system with AI-powered medical assistance, ap
    - Both parties receive calendar invitations
    - Automatic email notifications via Google Calendar
 
-## 🛠️ Tech Stack
+---
+
+## Tech Stack
 
 ### Backend
 
-- **FastAPI** - Modern, fast web framework for APIs
-- **SQLite** - Lightweight database for appointments and users
-- **Google Gemini AI** - Advanced language model
-- **ChromaDB** - Vector database for RAG
-- **Pipedream** - Google Calendar integration
-- **FastMCP** - Model Context Protocol for tool calling
+| Technology | Purpose |
+|---|---|
+| **FastAPI** | Modern, fast web framework for APIs |
+| **SQLite** | Lightweight database for appointments and users |
+| **Google Gemini AI** | Advanced language model (Gemini 2.5 Flash) |
+| **ChromaDB** | Vector database for RAG |
+| **Pipedream** | Google Calendar integration |
+| **FastMCP** | Model Context Protocol for tool calling |
 
 ### Frontend
 
-- **React 18** - Modern UI library
-- **TypeScript** - Type-safe JavaScript
-- **Vite** - Lightning-fast build tool
-- **Tailwind CSS** - Utility-first CSS framework
-- **Shadcn/ui** - Beautiful component library
-- **React Router** - Client-side routing
+| Technology | Purpose |
+|---|---|
+| **React 18** | Modern UI library |
+| **TypeScript** | Type-safe JavaScript |
+| **Vite** | Lightning-fast build tool |
+| **Tailwind CSS** | Utility-first CSS framework |
+| **Shadcn/ui** | Beautiful component library |
+| **React Router** | Client-side routing |
 
-## 📋 Prerequisites
+---
+
+## Prerequisites
 
 - Python 3.8 or higher
 - Node.js 16+ and npm/bun
 - Google API Key (for Gemini AI)
 - Pipedream account with Google Calendar connected
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone the Repository
 
@@ -152,7 +186,9 @@ bun run dev
 
 Frontend will run on `http://localhost:8080`
 
-## 📚 API Documentation
+---
+
+## API Documentation
 
 Once the backend is running, visit:
 
@@ -163,28 +199,34 @@ Once the backend is running, visit:
 
 #### Patient Endpoints
 
-- `POST /api/v1/patients/register` - Register new patient
-- `POST /api/v1/patients/login` - Patient login
-- `GET /api/v1/doctors` - Get all doctors
-- `GET /api/v1/doctors/{id}/availability` - Get available time slots
-- `POST /api/v1/appointments` - Book appointment
-- `POST /api/v1/chat` - Chat with AI assistant
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/patients/register` | Register new patient |
+| `POST` | `/api/v1/patients/login` | Patient login |
+| `GET` | `/api/v1/doctors` | Get all doctors |
+| `GET` | `/api/v1/doctors/{id}/availability` | Get available time slots |
+| `POST` | `/api/v1/appointments` | Book appointment |
+| `POST` | `/api/v1/chat` | Chat with AI assistant |
 
 #### Doctor Endpoints
 
-- `POST /api/v1/doctors/login` - Doctor login
-- `GET /api/v1/doctors/{id}/stats` - Get doctor statistics
-- `GET /api/v1/doctors/{id}/appointments` - Get appointments
-- `PUT /api/v1/appointments/{id}/approve` - Approve appointment
-- `PUT /api/v1/appointments/{id}/reject` - Reject appointment
-- `POST /api/v1/appointments/{id}/notes` - Add medical notes
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/doctors/login` | Doctor login |
+| `GET` | `/api/v1/doctors/{id}/stats` | Get doctor statistics |
+| `GET` | `/api/v1/doctors/{id}/appointments` | Get appointments |
+| `PUT` | `/api/v1/appointments/{id}/approve` | Approve appointment |
+| `PUT` | `/api/v1/appointments/{id}/reject` | Reject appointment |
+| `POST` | `/api/v1/appointments/{id}/notes` | Add medical notes |
 
-## 🏗️ Project Structure
+---
+
+## Project Structure
 
 ```
 healthcare-assistant/
 ├── api/                          # Backend API
-│   ├── main.py                  # FastAPI application
+│   ├── main.py                  # FastAPI application (46K+ lines)
 │   └── __init__.py
 ├── Frontend/                     # React frontend
 │   ├── src/
@@ -197,23 +239,29 @@ healthcare-assistant/
 │   ├── public/
 │   └── package.json
 ├── modules/                      # Core Python modules
-│   ├── scheduler.py            # Appointment scheduling
-│   ├── rag_engine.py           # RAG implementation
-│   ├── memory_manager.py       # Conversation memory
-│   └── calendar_integration.py # Google Calendar sync
+│   ├── scheduler.py            # Appointment scheduling logic
+│   ├── rag_engine.py           # RAG implementation with ChromaDB
+│   ├── memory_manager.py       # Conversation memory management
+│   ├── calendar_integration.py # Google Calendar sync via Pipedream
+│   ├── calendar_sync.py        # Calendar synchronization helpers
+│   └── calendar_assistant_wrapper.py
 ├── data/
 │   ├── healthcare.db           # SQLite database
 │   ├── medical_docs/           # Medical knowledge base
 │   └── vector_db/              # ChromaDB vector store
 ├── docs/                         # Documentation
-├── tests/                        # Test files
+├── tests/                        # Test files (20+ test scripts)
 ├── calendar_cli/                # Standalone calendar CLI
 ├── config.py                    # Configuration
+├── db_setup.py                  # Database initialization
+├── migrate_approval_system.py   # Migration script
 ├── requirements.txt             # Python dependencies
 └── README.md
 ```
 
-## 🎯 Key Features Explained
+---
+
+## Key Features Explained
 
 ### Double-Booking Prevention
 
@@ -225,9 +273,9 @@ healthcare-assistant/
 ### Approval Workflow
 
 ```
-Patient Books → pending_approval → Doctor Approves → confirmed
-                                  ↓
-                         Doctor Rejects → cancelled
+Patient Books --> pending_approval --> Doctor Approves --> confirmed
+                                      |
+                                      +--> Doctor Rejects --> cancelled
 ```
 
 ### Google Calendar Integration
@@ -244,7 +292,9 @@ Patient Books → pending_approval → Doctor Approves → confirmed
 - Context-aware conversations
 - Cited sources for transparency
 
-## 🔒 Security Features
+---
+
+## Security Features
 
 - Secure authentication for patients and doctors
 - Database-level conflict prevention
@@ -253,7 +303,9 @@ Patient Books → pending_approval → Doctor Approves → confirmed
 - CORS protection
 - Input validation and sanitization
 
-## 🧪 Testing
+---
+
+## Testing
 
 ```bash
 # Run basic tests
@@ -267,9 +319,20 @@ python tests/test_live_calendar_integration.py
 
 # Test doctor portal
 python tests/test_doctor_portal.py
+
+# Test RAG engine
+python tests/test_rag.py
+
+# Test appointment scheduler
+python tests/test_scheduler.py
+
+# Test memory manager
+python tests/test_memory_manager.py
 ```
 
-## 📖 Additional Documentation
+---
+
+## Additional Documentation
 
 - [Approval System Implementation](docs/APPROVAL_SYSTEM_IMPLEMENTATION.md)
 - [Quick Start Guide](docs/APPROVAL_SYSTEM_QUICK_START.md)
@@ -277,23 +340,9 @@ python tests/test_doctor_portal.py
 - [API Guide](docs/API_GUIDE.md)
 - [System Architecture](SYSTEM_ARCHITECTURE.md)
 
-## 🎨 Screenshots
+---
 
-### Patient Portal
-
-- Modern, intuitive booking interface
-- Real-time slot availability
-- AI chat assistant
-- Appointment history
-
-### Doctor Portal
-
-- Comprehensive dashboard
-- Pending approval management
-- Patient records and history
-- Analytics and insights
-
-## 🚧 Roadmap
+## Roadmap
 
 - [ ] SMS notifications
 - [ ] Mobile app (React Native)
@@ -303,7 +352,9 @@ python tests/test_doctor_portal.py
 - [ ] Multi-language support
 - [ ] Dark mode
 
-## 🤝 Contributing
+---
+
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -313,27 +364,23 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 👨‍💻 Author
+## Author
 
-**Major Abdullah**
+**Syed Abdullah Shah (Major Abdullah)**
 
 - GitHub: [@MajorAbdullah](https://github.com/MajorAbdullah)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Google Gemini AI for powerful language models
 - Pipedream for seamless integrations
 - Shadcn/ui for beautiful components
 - FastAPI for excellent developer experience
 
-## 📞 Support
-
-For support, please open an issue in the GitHub repository or contact the maintainers.
-
 ---
 
-**Built with ❤️ by Major Abdullah**
+**Built by [Major Abdullah](https://github.com/MajorAbdullah)**
