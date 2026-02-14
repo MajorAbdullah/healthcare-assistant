@@ -116,6 +116,8 @@ const BookAppointment = () => {
       return;
     }
 
+    let loadingToast: string | number | undefined;
+    
     try {
       setIsLoading(true);
       // Format date in local timezone to avoid UTC conversion shifting the date
@@ -124,8 +126,8 @@ const BookAppointment = () => {
       const day = String(selectedDate.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
       
-      // Show loading toast with calendar sync message
-      const loadingToast = toast.loading("Booking appointment and syncing to Google Calendar...", {
+      // Show loading toast
+      loadingToast = toast.loading("Submitting appointment request...", {
         duration: Infinity,
       });
       
@@ -165,7 +167,12 @@ const BookAppointment = () => {
         }
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to book appointment");
+      // Dismiss loading toast if it exists
+      if (loadingToast) {
+        toast.dismiss(loadingToast);
+      }
+      console.error("Booking error:", error);
+      toast.error(error.message || "Failed to book appointment. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -283,12 +283,9 @@ YOUR RESPONSE (be natural, helpful, and conversational): """
         search_results = self.search(question, n_results)
         
         if not search_results:
-            return {
-                'answer': "I don't have any medical documents to answer this question. Please add medical documents first.",
-                'citations': [],
-                'sources': [],
-                'search_results': []
-            }
+            # No documents found - fall back to direct LLM response
+            return self.generate_answer(question, "No specific medical documents available. Use your general medical knowledge.", [])
+
         
         if verbose:
             console.print(f"  ✓ Found {len(search_results)} relevant passages", style="green")

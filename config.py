@@ -29,7 +29,7 @@ EXTERNAL_USER_ID = os.getenv("EXTERNAL_USER_ID", "user-123")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # RAG Configuration
-EMBEDDING_MODEL = "models/embedding-001"  # Gemini embeddings
+EMBEDDING_MODEL = "models/gemini-embedding-001"  # Gemini embeddings
 LLM_MODEL = "gemini-2.5-flash"
 CHUNK_SIZE = 500  # Characters per chunk
 CHUNK_OVERLAP = 50  # Overlap between chunks

@@ -18,6 +18,8 @@ import DoctorPatients from "./pages/doctor/Patients";
 import DoctorPatientDetail from "./pages/doctor/PatientDetail";
 import DoctorAnalytics from "./pages/doctor/Analytics";
 import DoctorProfile from "./pages/doctor/Profile";
+import AdminAuth from "./pages/admin/Auth";
+import AdminDashboard from "./pages/admin/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +48,10 @@ const App = () => (
           <Route path="/doctor/patients/:id" element={<DoctorPatientDetail />} />
           <Route path="/doctor/analytics" element={<DoctorAnalytics />} />
           <Route path="/doctor/profile" element={<DoctorProfile />} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/auth" element={<AdminAuth />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

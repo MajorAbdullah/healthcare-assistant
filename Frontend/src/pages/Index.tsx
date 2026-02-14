@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Heart, Stethoscope, Calendar, MessageCircle, Users, BarChart3 } from "lucide-react";
+import { Heart, Stethoscope, Calendar, MessageCircle, Users, BarChart3, Shield } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -112,6 +112,18 @@ const Index = () => {
               </Card>
             ))}
           </div>
+        </div>
+
+        {/* Admin Link */}
+        <div className="mt-16 text-center">
+          <Button 
+            onClick={() => navigate("/admin/auth")} 
+            variant="ghost"
+            className="text-white/60 hover:text-white gap-2"
+          >
+            <Shield className="w-4 h-4" />
+            Admin Access
+          </Button>
         </div>
       </div>
     </div>

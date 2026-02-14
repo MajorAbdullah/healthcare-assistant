@@ -38,3 +38,6 @@ wheels/
 Thumbs.db
 
 Calendar_Assistant_-_CLI_Quickstart-oauth-credentials.txt
+
+# Playwright MCP logs
+.playwright-mcp/

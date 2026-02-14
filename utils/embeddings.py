@@ -13,7 +13,7 @@ console = Console()
 class EmbeddingGenerator:
     """Generate embeddings using Google Gemini API."""
     
-    def __init__(self, api_key: str, model_name: str = "models/embedding-001"):
+    def __init__(self, api_key: str, model_name: str = "models/gemini-embedding-001"):
         """
         Initialize the embedding generator.
         
@@ -105,7 +105,7 @@ class EmbeddingGenerator:
                         style="yellow"
                     )
                     # Use a default dimension size (768 for Gemini)
-                    embeddings.append([0.0] * 768)
+                    embeddings.append([0.0] * 3072)
                 
                 # Rate limiting: small delay between requests
                 if j < len(batch) - 1:  # Don't sleep after last item

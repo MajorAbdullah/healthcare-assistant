@@ -30,7 +30,7 @@ class MemoryManager:
     
     def _initialize_preferences_table(self):
         """Create user preferences table if it doesn't exist."""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -72,7 +72,7 @@ class MemoryManager:
         Returns:
             conversation_id: ID of the saved conversation
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         # Store context as JSON
@@ -117,7 +117,7 @@ class MemoryManager:
         Returns:
             List of conversation dictionaries
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         # Map 'patient'/'doctor' to 'user' for compatibility
@@ -168,7 +168,7 @@ class MemoryManager:
         Returns:
             Dictionary with conversation statistics
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         since_date = datetime.now() - timedelta(days=days)
@@ -208,7 +208,7 @@ class MemoryManager:
         Returns:
             Dictionary with user profile, preferences, and history
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         # Get user info
@@ -295,7 +295,7 @@ class MemoryManager:
         Returns:
             True if successful
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         # Check if preferences exist
@@ -367,7 +367,7 @@ class MemoryManager:
         Returns:
             Dictionary with patterns and recommendations
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         # Get all appointments
@@ -428,7 +428,7 @@ class MemoryManager:
         Returns:
             List of health topics discussed
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -478,7 +478,7 @@ class MemoryManager:
             time_msg = f"Welcome, {first_name}! I'm your healthcare assistant."
         
         # Add appointment reminder if upcoming
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -517,7 +517,7 @@ class MemoryManager:
         Returns:
             Recommendation dictionary or None
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         cursor = conn.cursor()
         
         # Get last completed appointment
