@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    phone TEXT,
+    password_hash TEXT NOT NULL,
     date_of_birth DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS doctors (
     name TEXT NOT NULL,
     specialty TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    phone TEXT,
+    password_hash TEXT NOT NULL,
     calendar_id TEXT, -- Google Calendar ID for Pipedream integration
     consultation_duration INTEGER DEFAULT 30, -- Duration in minutes
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -50,11 +50,13 @@ CREATE TABLE IF NOT EXISTS appointments (
     reason TEXT, -- Chief complaint or reason for visit
     notes TEXT, -- Additional notes
     calendar_event_id TEXT, -- Google Calendar event ID from Pipedream
+    approval_email_sent BOOLEAN DEFAULT 0,
+    confirmation_email_sent BOOLEAN DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (doctor_id) REFERENCES doctors(doctor_id) ON DELETE CASCADE,
-    CHECK (status IN ('scheduled', 'confirmed', 'cancelled', 'completed'))
+    CHECK (status IN ('scheduled', 'confirmed', 'cancelled', 'completed', 'pending_approval'))
 );
 
 -- Conversation history (for memory/context)

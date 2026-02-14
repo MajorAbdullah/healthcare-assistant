@@ -15,12 +15,13 @@ const DoctorAuth = () => {
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
-  const [loginPhone, setLoginPhone] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
   // Register form state
   const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
-  const [registerPhone, setRegisterPhone] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
   const [registerSpecialty, setRegisterSpecialty] = useState("");
   const [registerDuration, setRegisterDuration] = useState("30");
 
@@ -28,7 +29,7 @@ const DoctorAuth = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!loginEmail || !loginPhone) {
+    if (!loginEmail || !loginPassword) {
       toast.error("Please fill in all fields");
       setIsLoading(false);
       return;
@@ -37,7 +38,7 @@ const DoctorAuth = () => {
     try {
       const result = await api.doctor.login({
         email: loginEmail,
-        phone: loginPhone,
+        password: loginPassword,
       });
 
       if (result.success && result.data) {
@@ -61,8 +62,20 @@ const DoctorAuth = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!registerName || !registerEmail || !registerPhone || !registerSpecialty) {
+    if (!registerName || !registerEmail || !registerPassword || !registerConfirmPassword || !registerSpecialty) {
       toast.error("Please fill in all required fields");
+      setIsLoading(false);
+      return;
+    }
+
+    if (registerPassword !== registerConfirmPassword) {
+      toast.error("Passwords do not match");
+      setIsLoading(false);
+      return;
+    }
+
+    if (registerPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
       setIsLoading(false);
       return;
     }
@@ -71,7 +84,7 @@ const DoctorAuth = () => {
       const result = await api.doctor.register({
         name: registerName,
         email: registerEmail,
-        phone: registerPhone,
+        password: registerPassword,
         specialty: registerSpecialty,
         consultation_duration: parseInt(registerDuration) || 30,
       });
@@ -132,13 +145,13 @@ const DoctorAuth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-phone">Phone Number</Label>
+                  <Label htmlFor="login-password">Password</Label>
                   <Input
-                    id="login-phone"
-                    type="tel"
-                    placeholder="03001234567"
-                    value={loginPhone}
-                    onChange={(e) => setLoginPhone(e.target.value)}
+                    id="login-password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     required
                   />
                 </div>
@@ -173,13 +186,24 @@ const DoctorAuth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-phone">Phone Number</Label>
+                  <Label htmlFor="register-password">Password</Label>
                   <Input
-                    id="register-phone"
-                    type="tel"
-                    placeholder="03001234567"
-                    value={registerPhone}
-                    onChange={(e) => setRegisterPhone(e.target.value)}
+                    id="register-password"
+                    type="password"
+                    placeholder="At least 6 characters"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-confirm-password">Confirm Password</Label>
+                  <Input
+                    id="register-confirm-password"
+                    type="password"
+                    placeholder="Re-enter your password"
+                    value={registerConfirmPassword}
+                    onChange={(e) => setRegisterConfirmPassword(e.target.value)}
                     required
                   />
                 </div>

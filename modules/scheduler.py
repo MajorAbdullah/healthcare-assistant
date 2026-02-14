@@ -56,7 +56,7 @@ class AppointmentScheduler:
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT doctor_id, name, specialty, email, phone, 
+            SELECT doctor_id, name, specialty, email,
                    calendar_id, consultation_duration
             FROM doctors
             ORDER BY name
@@ -72,7 +72,7 @@ class AppointmentScheduler:
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT doctor_id, name, specialty, email, phone,
+            SELECT doctor_id, name, specialty, email,
                    calendar_id, consultation_duration
             FROM doctors
             WHERE doctor_id = ?
@@ -89,7 +89,7 @@ class AppointmentScheduler:
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT doctor_id, name, specialty, email, phone,
+            SELECT doctor_id, name, specialty, email,
                    calendar_id, consultation_duration
             FROM doctors
             WHERE specialty LIKE ?
@@ -102,31 +102,31 @@ class AppointmentScheduler:
     
     # ==================== PATIENT MANAGEMENT ====================
     
-    def get_or_create_patient(self, name: str, email: str, phone: str = None) -> int:
+    def get_or_create_patient(self, name: str, email: str, password_hash: str = None) -> int:
         """
         Get existing patient or create new one.
-        
+
         Returns:
             user_id of the patient
         """
         conn = self._get_connection()
         cursor = conn.cursor()
-        
+
         # Try to find existing patient by email
         cursor.execute("SELECT user_id FROM users WHERE email = ?", (email,))
         row = cursor.fetchone()
-        
+
         if row:
             user_id = row['user_id']
         else:
             # Create new patient
             cursor.execute("""
-                INSERT INTO users (name, email, phone)
+                INSERT INTO users (name, email, password_hash)
                 VALUES (?, ?, ?)
-            """, (name, email, phone))
+            """, (name, email, password_hash))
             user_id = cursor.lastrowid
             conn.commit()
-        
+
         conn.close()
         return user_id
     
@@ -136,7 +136,7 @@ class AppointmentScheduler:
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT user_id, name, email, phone, date_of_birth
+            SELECT user_id, name, email, date_of_birth
             FROM users
             WHERE user_id = ?
         """, (user_id,))

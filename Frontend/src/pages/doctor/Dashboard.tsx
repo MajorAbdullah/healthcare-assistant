@@ -17,10 +17,10 @@ const DoctorDashboard = () => {
   
   // Stats
   const [stats, setStats] = useState<DoctorStats>({
+    today_count: 0,
     total_patients: 0,
-    total_appointments: 0,
-    upcoming_appointments: 0,
-    completed_today: 0
+    week_count: 0,
+    completion_rate: 0
   });
   
   // Today's appointments
@@ -107,10 +107,10 @@ const DoctorDashboard = () => {
   };
 
   const statCards = [
-    { label: "Today's Appointments", value: String(stats.completed_today), icon: Calendar, color: "text-primary" },
+    { label: "Today's Appointments", value: String(stats.today_count), icon: Calendar, color: "text-primary" },
     { label: "Total Patients", value: String(stats.total_patients), icon: Users, color: "text-secondary" },
-    { label: "Upcoming", value: String(stats.upcoming_appointments), icon: Clock, color: "text-accent" },
-    { label: "Total Appointments", value: String(stats.total_appointments), icon: TrendingUp, color: "text-success" },
+    { label: "This Week", value: String(stats.week_count), icon: Clock, color: "text-accent" },
+    { label: "Completion Rate", value: `${stats.completion_rate}%`, icon: TrendingUp, color: "text-success" },
   ];
 
   return (

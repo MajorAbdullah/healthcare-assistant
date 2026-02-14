@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit2, Save, X, Calendar, Mail, Phone, User, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Edit2, Save, X, Calendar, Mail, User, Calendar as CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -32,7 +32,6 @@ const PatientProfile = () => {
   // Profile data
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("male");
   
@@ -66,7 +65,6 @@ const PatientProfile = () => {
       if (result.success && result.data) {
         setName(result.data.name);
         setEmail(result.data.email || "");
-        setPhone(result.data.phone || "");
         setDob(result.data.date_of_birth || "");
         setGender(result.data.gender || "male");
       }
@@ -114,7 +112,6 @@ const PatientProfile = () => {
       const profileResult = await api.patient.updateProfile(userId, {
         name,
         email,
-        phone,
         date_of_birth: dob,
         gender: gender as "male" | "female" | "other"
       });
@@ -266,23 +263,6 @@ const PatientProfile = () => {
                   <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
                     <Mail className="w-4 h-4 text-muted-foreground" />
                     <span>{email}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                {isEditing ? (
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span>{phone}</span>
                   </div>
                 )}
               </div>

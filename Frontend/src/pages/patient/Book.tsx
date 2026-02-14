@@ -96,7 +96,10 @@ const BookAppointment = () => {
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     if (date && selectedDoctor) {
-      const dateStr = date.toISOString().split('T')[0];
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
       loadAvailability(selectedDoctor.doctor_id, dateStr);
     }
   };
@@ -159,8 +162,10 @@ const BookAppointment = () => {
           setSelectedTime("");
           // Reload availability
           if (selectedDate && selectedDoctor) {
-            const dateStr = selectedDate.toISOString().split('T')[0];
-            loadAvailability(selectedDoctor.doctor_id, dateStr);
+            const y = selectedDate.getFullYear();
+            const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
+            loadAvailability(selectedDoctor.doctor_id, `${y}-${m}-${d}`);
           }
         } else {
           toast.error(result.message || "Failed to book appointment");
