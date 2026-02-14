@@ -41,3 +41,7 @@ Calendar_Assistant_-_CLI_Quickstart-oauth-credentials.txt
 
 # Playwright MCP logs
 .playwright-mcp/
+
+# Remotion video project & rendered outputs
+videos/
+Frontend/public/videos/*.mp4
