@@ -44,37 +44,81 @@ DEFAULT_APPOINTMENT_DURATION = 30  # minutes
 TIMEZONE = "Asia/Karachi"
 BOOKING_ADVANCE_DAYS = 30  # How far in advance patients can book
 
-# Doctor Configuration (Sample data)
+# Doctor Configuration (Seed data)
 SAMPLE_DOCTORS = [
+    # --- 5 Pakistani Doctors ---
     {
-        "external_id": "doctor-sarah",
-        "name": "Dr. Sarah Johnson",
-        "email": "sarah.johnson@hospital.com",
+        "name": "Dr. Ayesha Malik",
+        "email": "ayesha.malik@healthbuddy.pk",
         "specialization": "Neurology - Stroke Specialist",
-        "calendar_id": "pinkpantherking20@gmail.com"  # Using your existing calendar for demo
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
     },
     {
-        "external_id": "doctor-michael",
-        "name": "Dr. Michael Chen",
-        "email": "michael.chen@hospital.com",
+        "name": "Dr. Usman Ahmed",
+        "email": "usman.ahmed@healthbuddy.pk",
+        "specialization": "Cardiology",
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
+    },
+    {
+        "name": "Dr. Fatima Hassan",
+        "email": "fatima.hassan@healthbuddy.pk",
+        "specialization": "General Medicine",
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
+    },
+    {
+        "name": "Dr. Bilal Qureshi",
+        "email": "bilal.qureshi@healthbuddy.pk",
+        "specialization": "Orthopedics",
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
+    },
+    {
+        "name": "Dr. Sana Rizvi",
+        "email": "sana.rizvi@healthbuddy.pk",
+        "specialization": "Dermatology",
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
+    },
+    # --- 5 International Doctors ---
+    {
+        "name": "Dr. Emily Carter",
+        "email": "emily.carter@healthbuddy.com",
         "specialization": "Emergency Medicine",
-        "calendar_id": "pinkpantherking20@gmail.com"  # Using same for demo
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
     },
     {
-        "external_id": "doctor-aisha",
-        "name": "Dr. Aisha Khan",
-        "email": "aisha.khan@hospital.com",
+        "name": "Dr. James O'Brien",
+        "email": "james.obrien@healthbuddy.com",
+        "specialization": "Psychiatry",
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
+    },
+    {
+        "name": "Dr. Yuki Tanaka",
+        "email": "yuki.tanaka@healthbuddy.com",
+        "specialization": "Pediatrics",
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
+    },
+    {
+        "name": "Dr. Sofia Rossi",
+        "email": "sofia.rossi@healthbuddy.com",
+        "specialization": "Gynecology",
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
+    },
+    {
+        "name": "Dr. David Kim",
+        "email": "david.kim@healthbuddy.com",
         "specialization": "Rehabilitation & Recovery",
-        "calendar_id": "pinkpantherking20@gmail.com"  # Using same for demo
-    }
+        "password": "doctor@123",
+        "calendar_id": "pinkpantherking20@gmail.com",
+    },
 ]
-
-# Sample Patient
-SAMPLE_PATIENT = {
-    "external_id": "patient-john",
-    "name": "John Doe",
-    "email": "john.doe@email.com"
-}
 
 # System Prompts
 RAG_SYSTEM_PROMPT = """You are a medical education assistant specializing in stroke awareness and education.
@@ -121,6 +165,10 @@ CONTEXT_WINDOW_MESSAGES = 10  # Recent messages to include in context
 # UI Configuration
 CLI_WIDTH = 100
 CLI_THEME = "monokai"
+
+# Admin Configuration
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
 # Feature Flags (for development)
 ENABLE_WEB_UI = False

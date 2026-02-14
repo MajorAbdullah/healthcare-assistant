@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Shield, Lock } from "lucide-react";
+import api from "@/lib/api";
 
 const AdminAuth = () => {
   const navigate = useNavigate();
@@ -13,32 +14,31 @@ const AdminAuth = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Simple admin credentials (in production, this should be handled securely on backend)
-  const ADMIN_USERNAME = "admin";
-  const ADMIN_PASSWORD = "admin123"; // Change this in production!
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!username || !password) {
       toast.error("Please fill in all fields");
       return;
     }
 
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        localStorage.setItem("admin_token", "admin_authenticated");
-        localStorage.setItem("admin_username", username);
+
+    try {
+      const result = await api.admin.login({ username, password });
+      if (result.success && result.data) {
+        localStorage.setItem("admin_token", result.data.token);
+        localStorage.setItem("admin_username", result.data.username);
         toast.success("Welcome, Admin!");
         navigate("/admin/dashboard");
       } else {
-        toast.error("Invalid credentials");
+        toast.error(result.message || "Invalid credentials");
       }
+    } catch (error: any) {
+      toast.error(error.message || "Invalid credentials");
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   return (
@@ -92,27 +92,21 @@ const AdminAuth = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full bg-purple-600 hover:bg-purple-700"
                 disabled={isLoading}
               >
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </form>
-
-            <div className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs text-amber-900 text-center">
-                🔒 Default credentials: admin / admin123
-              </p>
-            </div>
           </CardContent>
         </Card>
 
         {/* Back Button */}
         <div className="mt-4 text-center">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => navigate("/")}
             className="text-purple-200 hover:text-white"
           >

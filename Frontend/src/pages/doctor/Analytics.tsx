@@ -42,57 +42,62 @@ const Analytics = () => {
     }
   };
 
-  // Mock data for charts (can be replaced with real API data when available)
-  const appointmentTrends = analytics?.monthly_data || [];
-  
-  const completionRate = [
-    { name: "Completed", value: 95, color: "hsl(var(--success))" },
-    { name: "Cancelled", value: 3, color: "hsl(var(--destructive))" },
-    { name: "No-shows", value: 2, color: "hsl(var(--warning))" },
-  ];
+  // Transform API data for charts
+  const statusColors: Record<string, string> = {
+    completed: "hsl(var(--success))",
+    scheduled: "hsl(var(--primary))",
+    cancelled: "hsl(var(--destructive))",
+    pending_approval: "hsl(var(--warning))",
+    confirmed: "hsl(142 76% 36%)",
+  };
 
-  const weeklyBreakdown = [
-    { day: "Mon", count: 12 },
-    { day: "Tue", count: 15 },
-    { day: "Wed", count: 18 },
-    { day: "Thu", count: 14 },
-    { day: "Fri", count: 20 },
-    { day: "Sat", count: 8 },
-    { day: "Sun", count: 5 },
-  ];
+  const completionRate = analytics?.status_breakdown
+    ? Object.entries(analytics.status_breakdown).map(([name, value]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1).replace('_', ' '),
+        value,
+        color: statusColors[name] || "hsl(var(--muted))",
+      }))
+    : [];
 
-  const patientGrowth = analytics?.monthly_data || [];
+  const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const dayShort: Record<string, string> = { Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat", Sunday: "Sun" };
+
+  const weeklyBreakdown = analytics?.weekly_breakdown
+    ? dayOrder
+        .filter(day => day in analytics.weekly_breakdown)
+        .map(day => ({ day: dayShort[day], count: analytics.weekly_breakdown[day] }))
+    : [];
+
+  const appointmentTrends = analytics?.daily_breakdown || [];
+
+  const patientGrowth = analytics?.patient_growth || [];
 
   const stats = [
-    { 
-      label: "Total Appointments", 
-      value: String(analytics?.total_appointments || 0), 
-      change: "+12%", 
-      icon: CalendarIcon, 
+    {
+      label: "Total Appointments",
+      value: String(analytics?.total_appointments || 0),
+      icon: CalendarIcon,
       color: "text-primary",
       bgColor: "bg-primary/10"
     },
-    { 
-      label: "Total Patients", 
-      value: String(analytics?.new_patients || 0), 
-      change: "+8%", 
-      icon: Users, 
+    {
+      label: "Total Patients",
+      value: String(analytics?.total_patients || 0),
+      icon: Users,
       color: "text-secondary",
       bgColor: "bg-secondary/10"
     },
-    { 
-      label: "Avg Daily Appointments", 
-      value: "7.8", 
-      change: "+5%", 
-      icon: TrendingUp, 
+    {
+      label: "Avg Daily Appointments",
+      value: String(analytics?.avg_daily_appointments || 0),
+      icon: TrendingUp,
       color: "text-accent",
       bgColor: "bg-accent/10"
     },
-    { 
-      label: "Completion Rate", 
-      value: "95%", 
-      change: "+2%", 
-      icon: CheckCircle, 
+    {
+      label: "Completion Rate",
+      value: `${analytics?.completion_rate || 0}%`,
+      icon: CheckCircle,
       color: "text-success",
       bgColor: "bg-success/10"
     },
@@ -104,7 +109,34 @@ const Analytics = () => {
   };
 
   const handleExport = () => {
-    console.log("Exporting analytics data...");
+    if (!analytics) {
+      toast.error("No analytics data to export");
+      return;
+    }
+
+    const rows = [
+      ["Metric", "Value"],
+      ["Total Appointments", String(analytics.total_appointments)],
+      ["Total Patients", String(analytics.total_patients)],
+      ["Avg Daily Appointments", String(analytics.avg_daily_appointments)],
+      ["Completion Rate", `${analytics.completion_rate}%`],
+      [],
+      ["Status", "Count"],
+      ...Object.entries(analytics.status_breakdown).map(([status, count]) => [status, String(count)]),
+      [],
+      ["Date", "Appointments"],
+      ...analytics.daily_breakdown.map(d => [d.date, String(d.count)]),
+    ];
+
+    const csv = rows.map(row => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `analytics_${analytics.period.start_date}_${analytics.period.end_date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Analytics exported successfully");
   };
 
   return (
@@ -171,7 +203,6 @@ const Analytics = () => {
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
                     <p className="text-3xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-success mt-1">{stat.change} from last period</p>
                   </div>
                   <div className={`${stat.bgColor} p-3 rounded-full`}>
                     <stat.icon className={`h-6 w-6 ${stat.color}`} />

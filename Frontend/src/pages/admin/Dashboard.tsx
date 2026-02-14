@@ -49,9 +49,8 @@ const AdminDashboard = () => {
   const loadDocuments = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:8000/api/v1/admin/documents');
-      const result = await response.json();
-      
+      const result = await api.admin.getDocuments();
+
       if (result.success && result.data) {
         setDocuments(result.data.documents || []);
       }
@@ -64,9 +63,8 @@ const AdminDashboard = () => {
 
   const loadStats = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/admin/stats');
-      const result = await response.json();
-      
+      const result = await api.admin.getStats();
+
       if (result.success && result.data) {
         setStats(result.data);
       }
@@ -96,12 +94,7 @@ const AdminDashboard = () => {
     });
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/admin/documents/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
+      const result = await api.admin.uploadDocuments(formData);
 
       if (result.success) {
         toast.success(`Successfully uploaded ${selectedFiles.length} file(s)! Indexing in progress...`);
@@ -130,11 +123,7 @@ const AdminDashboard = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/admin/documents/${docId}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
+      const result = await api.admin.deleteDocument(docId);
 
       if (result.success) {
         toast.success("Document deleted successfully");

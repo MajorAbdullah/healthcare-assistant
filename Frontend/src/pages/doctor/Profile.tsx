@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,12 +26,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Briefcase, 
-  Award, 
+import {
+  User,
+  Mail,
+  Phone,
+  Briefcase,
+  Award,
   Calendar,
   Clock,
   LogOut,
@@ -45,22 +45,28 @@ import {
   Shield
 } from "lucide-react";
 import { toast } from "sonner";
+import api, { type DoctorProfile as DoctorProfileData } from "@/lib/api";
 
 const DoctorProfile = () => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  
-  // Simulated doctor data
+  const [isLoading, setIsLoading] = useState(true);
+  const [doctorId, setDoctorId] = useState<number>(0);
+
   const [doctorData, setDoctorData] = useState({
-    id: 1,
-    name: "Dr. Aisha Khan",
-    email: "aisha.khan@hospital.com",
-    phone: "+1 (555) 123-4567",
-    specialty: "Cardiologist",
-    licenseNumber: "MD-12345-NY",
-    yearsOfExperience: 12,
-    education: "MBBS, MD - Harvard Medical School",
-    registrationDate: "2020-01-15"
+    name: "",
+    email: "",
+    specialty: "",
+    consultation_duration: 30,
+    created_at: "",
+  });
+
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    totalAppointments: 0,
+    completedAppointments: 0,
+    upcomingAppointments: 0,
+    completionRate: 0,
   });
 
   const [preferences, setPreferences] = useState({
@@ -77,21 +83,82 @@ const DoctorProfile = () => {
     maxPatientsPerDay: "20"
   });
 
-  const stats = {
-    totalPatients: 127,
-    totalAppointments: 342,
-    completedAppointments: 325,
-    upcomingAppointments: 8,
-    completionRate: 95,
-    avgRating: 4.8
-  };
-
   const [formData, setFormData] = useState(doctorData);
 
-  const handleSave = () => {
-    setDoctorData(formData);
-    setIsEditing(false);
-    toast.success("Profile updated successfully!");
+  useEffect(() => {
+    const id = localStorage.getItem("doctor_id");
+    if (!id) {
+      toast.error("Please login first");
+      navigate("/doctor/auth");
+      return;
+    }
+    setDoctorId(parseInt(id));
+    loadProfileData(parseInt(id));
+  }, [navigate]);
+
+  const loadProfileData = async (id: number) => {
+    try {
+      setIsLoading(true);
+
+      // Load doctor profile with stats
+      const profileResult = await api.doctor.getProfile(id);
+      if (profileResult.success && profileResult.data) {
+        const p = profileResult.data;
+        const data = {
+          name: p.name,
+          email: p.email,
+          specialty: p.specialty,
+          consultation_duration: p.consultation_duration,
+          created_at: p.created_at,
+        };
+        setDoctorData(data);
+        setFormData(data);
+        setStats({
+          totalPatients: p.stats.total_patients,
+          totalAppointments: p.stats.total_appointments,
+          completedAppointments: p.stats.completed_appointments,
+          upcomingAppointments: p.stats.upcoming_appointments,
+          completionRate: p.stats.completion_rate,
+        });
+      }
+
+      // Load availability settings
+      const availResult = await api.doctor.getAvailabilitySettings(id);
+      if (availResult.success && availResult.data) {
+        setAvailability({
+          startTime: availResult.data.start_time,
+          endTime: availResult.data.end_time,
+          slotDuration: String(availResult.data.consultation_duration),
+          maxPatientsPerDay: "20",
+        });
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load profile");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const result = await api.doctor.updateProfile(doctorId, {
+        name: formData.name,
+        email: formData.email,
+        specialty: formData.specialty,
+      });
+      if (result.success) {
+        setDoctorData(formData);
+        // Update localStorage so header stays in sync
+        localStorage.setItem("doctor_name", formData.name);
+        localStorage.setItem("doctor_specialty", formData.specialty);
+        setIsEditing(false);
+        toast.success("Profile updated successfully!");
+      } else {
+        toast.error(result.message || "Failed to update profile");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update profile");
+    }
   };
 
   const handleCancel = () => {
@@ -102,6 +169,7 @@ const DoctorProfile = () => {
   const handleLogout = () => {
     localStorage.removeItem("doctor_id");
     localStorage.removeItem("doctor_name");
+    localStorage.removeItem("doctor_specialty");
     toast.success("Logged out successfully");
     navigate("/doctor/auth");
   };
@@ -115,8 +183,21 @@ const DoctorProfile = () => {
     setAvailability(prev => ({ ...prev, [key]: value }));
   };
 
-  const saveAvailability = () => {
-    toast.success("Availability settings saved!");
+  const saveAvailability = async () => {
+    try {
+      const result = await api.doctor.updateAvailabilitySettings(doctorId, {
+        start_time: availability.startTime,
+        end_time: availability.endTime,
+        consultation_duration: parseInt(availability.slotDuration),
+      });
+      if (result.success) {
+        toast.success("Availability settings saved!");
+      } else {
+        toast.error(result.message || "Failed to save availability");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save availability");
+    }
   };
 
   const getInitials = (name: string) => {
@@ -127,10 +208,20 @@ const DoctorProfile = () => {
       .toUpperCase();
   };
 
-  const memberSince = new Date(doctorData.registrationDate).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric"
-  });
+  const memberSince = doctorData.created_at
+    ? new Date(doctorData.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric"
+      })
+    : "N/A";
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -174,22 +265,22 @@ const DoctorProfile = () => {
                 <div className="flex flex-col items-center text-center space-y-4">
                   <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
                     <AvatarFallback className="text-3xl bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                      {getInitials(doctorData.name)}
+                      {doctorData.name ? getInitials(doctorData.name) : "DR"}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className="space-y-2">
                     <h2 className="text-2xl font-bold text-gray-900">{doctorData.name}</h2>
                     <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
                       {doctorData.specialty}
                     </Badge>
                     <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                      <Award className="h-4 w-4" />
-                      <span>{doctorData.yearsOfExperience} years experience</span>
+                      <Mail className="h-4 w-4" />
+                      <span>{doctorData.email}</span>
                     </div>
                     <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                      <Shield className="h-4 w-4" />
-                      <span>License: {doctorData.licenseNumber}</span>
+                      <Clock className="h-4 w-4" />
+                      <span>{doctorData.consultation_duration} min consultations</span>
                     </div>
                   </div>
 
@@ -330,57 +421,18 @@ const DoctorProfile = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
+                        <Label htmlFor="duration">Consultation Duration (min)</Label>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
-                            id="phone"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            disabled={!isEditing}
-                            className="pl-10 glass"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="license">License Number</Label>
-                        <div className="relative">
-                          <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input
-                            id="license"
-                            value={formData.licenseNumber}
-                            onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-                            disabled={!isEditing}
-                            className="pl-10 glass"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="experience">Years of Experience</Label>
-                        <div className="relative">
-                          <Award className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input
-                            id="experience"
+                            id="duration"
                             type="number"
-                            value={formData.yearsOfExperience}
-                            onChange={(e) => setFormData({ ...formData, yearsOfExperience: parseInt(e.target.value) })}
+                            value={formData.consultation_duration}
+                            onChange={(e) => setFormData({ ...formData, consultation_duration: parseInt(e.target.value) || 30 })}
                             disabled={!isEditing}
                             className="pl-10 glass"
                           />
                         </div>
-                      </div>
-
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="education">Education</Label>
-                        <Input
-                          id="education"
-                          value={formData.education}
-                          onChange={(e) => setFormData({ ...formData, education: e.target.value })}
-                          disabled={!isEditing}
-                          className="glass"
-                        />
                       </div>
                     </div>
 

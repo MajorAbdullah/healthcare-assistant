@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, date, timedelta
+import bcrypt
 import pytz
 import json
 import sys
@@ -103,18 +104,17 @@ def get_rag_engine():
 class PatientRegister(BaseModel):
     name: str
     email: EmailStr
-    phone: str
+    password: str
     dob: Optional[str] = None
     gender: Optional[str] = None
 
 class PatientLogin(BaseModel):
     email: EmailStr
-    phone: str
+    password: str
 
 class PatientUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
-    phone: Optional[str] = None
     dob: Optional[str] = None
     gender: Optional[str] = None
 
@@ -136,13 +136,13 @@ class ChatMessage(BaseModel):
 class DoctorRegister(BaseModel):
     name: str
     email: EmailStr
-    phone: str
+    password: str
     specialty: str
     consultation_duration: Optional[int] = 30
 
 class DoctorLogin(BaseModel):
     email: EmailStr
-    phone: str
+    password: str
 
 class PreferencesUpdate(BaseModel):
     email_notifications: Optional[bool] = None
@@ -176,12 +176,27 @@ def format_datetime(date_str: str, time_str: str) -> str:
 async def register_patient(patient: PatientRegister):
     """Register a new patient"""
     try:
-        user_id = scheduler.get_or_create_patient(
-            name=patient.name,
-            email=patient.email,
-            phone=patient.phone
-        )
-        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if email already exists
+        cursor.execute('SELECT user_id FROM users WHERE email = ?', (patient.email,))
+        if cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=409, detail="A patient with this email already exists")
+
+        # Hash password
+        password_hash = bcrypt.hashpw(patient.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        cursor.execute('''
+            INSERT INTO users (name, email, password_hash, date_of_birth)
+            VALUES (?, ?, ?, ?)
+        ''', (patient.name, patient.email, password_hash, patient.dob))
+
+        user_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
         return {
             "success": True,
             "data": {
@@ -190,6 +205,8 @@ async def register_patient(patient: PatientRegister):
             },
             "message": "Registration successful!"
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -200,26 +217,25 @@ async def login_patient(credentials: PatientLogin):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute('''
-            SELECT user_id, name, email, phone, created_at
+            SELECT user_id, name, email, password_hash, created_at
             FROM users
-            WHERE email = ? AND phone = ?
-        ''', (credentials.email, credentials.phone))
-        
+            WHERE email = ?
+        ''', (credentials.email,))
+
         user = cursor.fetchone()
         conn.close()
-        
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found. Please check your email and phone number.")
-        
+
+        if not user or not bcrypt.checkpw(credentials.password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+            raise HTTPException(status_code=401, detail="Invalid email or password.")
+
         return {
             "success": True,
             "data": {
                 "user_id": user['user_id'],
                 "name": user['name'],
                 "email": user['email'],
-                "phone": user['phone'],
                 "token": f"patient_{user['user_id']}"  # Simple token for prototype
             },
             "message": "Login successful!"
@@ -238,36 +254,36 @@ async def get_patient(user_id: int):
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT user_id, name, email, phone, created_at
+            SELECT user_id, name, email, date_of_birth, created_at
             FROM users
             WHERE user_id = ?
         ''', (user_id,))
-        
+
         user = cursor.fetchone()
-        
+
         if not user:
             raise HTTPException(status_code=404, detail="Patient not found")
-        
+
         # Get appointment statistics
         cursor.execute('''
-            SELECT 
+            SELECT
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) as upcoming,
                 SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
             FROM appointments
             WHERE user_id = ?
         ''', (user_id,))
-        
+
         stats = cursor.fetchone()
         conn.close()
-        
+
         return {
             "success": True,
             "data": {
                 "user_id": user['user_id'],
                 "name": user['name'],
                 "email": user['email'],
-                "phone": user['phone'],
+                "date_of_birth": user['date_of_birth'],
                 "created_at": user['created_at'],
                 "stats": {
                     "total_appointments": stats['total'] or 0,
@@ -299,9 +315,6 @@ async def update_patient(user_id: int, updates: PatientUpdate):
         if updates.email:
             update_fields.append("email = ?")
             values.append(updates.email)
-        if updates.phone:
-            update_fields.append("phone = ?")
-            values.append(updates.phone)
         
         if not update_fields:
             raise HTTPException(status_code=400, detail="No fields to update")
@@ -870,11 +883,14 @@ async def register_doctor(doctor: DoctorRegister):
             conn.close()
             raise HTTPException(status_code=409, detail="A doctor with this email already exists")
 
+        # Hash password
+        password_hash = bcrypt.hashpw(doctor.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
         # Insert doctor
         cursor.execute('''
-            INSERT INTO doctors (name, email, phone, specialty, consultation_duration)
+            INSERT INTO doctors (name, email, password_hash, specialty, consultation_duration)
             VALUES (?, ?, ?, ?, ?)
-        ''', (doctor.name, doctor.email, doctor.phone, doctor.specialty, doctor.consultation_duration))
+        ''', (doctor.name, doctor.email, password_hash, doctor.specialty, doctor.consultation_duration))
 
         doctor_id = cursor.lastrowid
 
@@ -909,22 +925,22 @@ async def register_doctor(doctor: DoctorRegister):
 
 @app.post("/api/v1/doctors/login")
 async def doctor_login(credentials: DoctorLogin):
-    """Doctor login with email and phone"""
+    """Doctor login with email and password"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute('''
-            SELECT doctor_id, name, specialty, calendar_id
+            SELECT doctor_id, name, specialty, calendar_id, password_hash
             FROM doctors
-            WHERE email = ? AND phone = ?
-        ''', (credentials.email, credentials.phone))
+            WHERE email = ?
+        ''', (credentials.email,))
 
         doctor = cursor.fetchone()
         conn.close()
 
-        if not doctor:
-            raise HTTPException(status_code=404, detail="Doctor not found. Please check your email and phone number.")
+        if not doctor or not bcrypt.checkpw(credentials.password.encode('utf-8'), doctor['password_hash'].encode('utf-8')):
+            raise HTTPException(status_code=401, detail="Invalid email or password.")
 
         return {
             "success": True,
@@ -938,6 +954,217 @@ async def doctor_login(credentials: DoctorLogin):
         }
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/doctors/{doctor_id}/profile")
+async def get_doctor_profile(doctor_id: int):
+    """Get full doctor profile"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT doctor_id, name, specialty, email, consultation_duration, created_at
+            FROM doctors
+            WHERE doctor_id = ?
+        ''', (doctor_id,))
+
+        doctor = cursor.fetchone()
+        if not doctor:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Doctor not found")
+
+        # Get stats
+        cursor.execute('''
+            SELECT
+                COUNT(DISTINCT user_id) as total_patients,
+                COUNT(*) as total_appointments,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_appointments,
+                SUM(CASE WHEN status IN ('scheduled', 'confirmed', 'pending_approval') THEN 1 ELSE 0 END) as upcoming_appointments
+            FROM appointments
+            WHERE doctor_id = ?
+        ''', (doctor_id,))
+        stats = cursor.fetchone()
+
+        total = stats['total_appointments'] or 0
+        completed = stats['completed_appointments'] or 0
+        completion_rate = round((completed / total * 100) if total > 0 else 0, 1)
+
+        conn.close()
+
+        return {
+            "success": True,
+            "data": {
+                "doctor_id": doctor['doctor_id'],
+                "name": doctor['name'],
+                "email": doctor['email'],
+                "specialty": doctor['specialty'],
+                "consultation_duration": doctor['consultation_duration'],
+                "created_at": doctor['created_at'],
+                "stats": {
+                    "total_patients": stats['total_patients'] or 0,
+                    "total_appointments": total,
+                    "completed_appointments": completed,
+                    "upcoming_appointments": stats['upcoming_appointments'] or 0,
+                    "completion_rate": completion_rate
+                }
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class DoctorProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    specialty: Optional[str] = None
+    consultation_duration: Optional[int] = None
+
+
+@app.put("/api/v1/doctors/{doctor_id}/profile")
+async def update_doctor_profile(doctor_id: int, updates: DoctorProfileUpdate):
+    """Update doctor profile"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        update_fields = []
+        values = []
+
+        if updates.name:
+            update_fields.append("name = ?")
+            values.append(updates.name)
+        if updates.email:
+            update_fields.append("email = ?")
+            values.append(updates.email)
+        if updates.specialty:
+            update_fields.append("specialty = ?")
+            values.append(updates.specialty)
+        if updates.consultation_duration is not None:
+            update_fields.append("consultation_duration = ?")
+            values.append(updates.consultation_duration)
+
+        if not update_fields:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        values.append(doctor_id)
+        cursor.execute(f"UPDATE doctors SET {', '.join(update_fields)} WHERE doctor_id = ?", values)
+
+        if cursor.rowcount == 0:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Doctor not found")
+
+        conn.commit()
+        conn.close()
+
+        return {
+            "success": True,
+            "message": "Profile updated successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/doctors/{doctor_id}/availability-settings")
+async def get_doctor_availability_settings(doctor_id: int):
+    """Get doctor's weekly availability settings"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT day_of_week, start_time, end_time, is_active
+            FROM doctor_availability
+            WHERE doctor_id = ?
+            ORDER BY day_of_week, start_time
+        ''', (doctor_id,))
+
+        rows = cursor.fetchall()
+
+        # Also get consultation duration
+        cursor.execute('SELECT consultation_duration FROM doctors WHERE doctor_id = ?', (doctor_id,))
+        doctor = cursor.fetchone()
+        conn.close()
+
+        if not doctor:
+            raise HTTPException(status_code=404, detail="Doctor not found")
+
+        schedule = {}
+        for row in rows:
+            day = row['day_of_week']
+            if day not in schedule:
+                schedule[day] = []
+            schedule[day].append({
+                "start_time": row['start_time'],
+                "end_time": row['end_time'],
+                "is_active": bool(row['is_active'])
+            })
+
+        # Derive simple start/end from first active day
+        start_time = "09:00"
+        end_time = "17:00"
+        if rows:
+            start_time = rows[0]['start_time']
+            end_time = rows[-1]['end_time']
+
+        return {
+            "success": True,
+            "data": {
+                "consultation_duration": doctor['consultation_duration'],
+                "start_time": start_time,
+                "end_time": end_time,
+                "schedule": schedule
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class AvailabilitySettingsUpdate(BaseModel):
+    start_time: str
+    end_time: str
+    consultation_duration: Optional[int] = None
+
+
+@app.put("/api/v1/doctors/{doctor_id}/availability-settings")
+async def update_doctor_availability_settings(doctor_id: int, settings: AvailabilitySettingsUpdate):
+    """Update doctor's availability settings"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Update consultation duration if provided
+        if settings.consultation_duration is not None:
+            cursor.execute(
+                'UPDATE doctors SET consultation_duration = ? WHERE doctor_id = ?',
+                (settings.consultation_duration, doctor_id)
+            )
+
+        # Update availability for weekdays (Mon-Fri, days 0-4)
+        cursor.execute('DELETE FROM doctor_availability WHERE doctor_id = ?', (doctor_id,))
+
+        for day in range(5):
+            # Morning block
+            cursor.execute('''
+                INSERT INTO doctor_availability (doctor_id, day_of_week, start_time, end_time)
+                VALUES (?, ?, ?, ?)
+            ''', (doctor_id, day, settings.start_time, settings.end_time))
+
+        conn.commit()
+        conn.close()
+
+        return {
+            "success": True,
+            "message": "Availability settings updated successfully"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1029,7 +1256,7 @@ async def get_doctor_appointments(
         today_pakistan = datetime.now(PAKISTAN_TZ).date().strftime('%Y-%m-%d')
         
         query = '''
-            SELECT a.*, u.name as patient_name, u.email as patient_email, u.phone as patient_phone
+            SELECT a.*, u.name as patient_name, u.email as patient_email
             FROM appointments a
             JOIN users u ON a.user_id = u.user_id
             WHERE a.doctor_id = ?
@@ -1082,22 +1309,21 @@ async def get_doctor_patients(
                 u.user_id,
                 u.name,
                 u.email,
-                u.phone,
                 COUNT(a.appointment_id) as total_visits,
                 MAX(a.appointment_date) as last_visit
             FROM users u
             JOIN appointments a ON u.user_id = a.user_id
             WHERE a.doctor_id = ?
         '''
-        
+
         params = [doctor_id]
-        
+
         if search:
-            query += " AND (u.name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)"
+            query += " AND (u.name LIKE ? OR u.email LIKE ?)"
             search_term = f"%{search}%"
-            params.extend([search_term, search_term, search_term])
-        
-        query += " GROUP BY u.user_id, u.name, u.email, u.phone"
+            params.extend([search_term, search_term])
+
+        query += " GROUP BY u.user_id, u.name, u.email"
         
         # Add sorting
         if sort == "name":
@@ -1139,7 +1365,7 @@ async def get_patient_history(patient_id: int):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute('''
             SELECT a.*, d.name as doctor_name, d.specialty
             FROM appointments a
@@ -1147,13 +1373,15 @@ async def get_patient_history(patient_id: int):
             WHERE a.user_id = ?
             ORDER BY a.appointment_date DESC, a.start_time DESC
         ''', (patient_id,))
-        
+
         appointments = cursor.fetchall()
         conn.close()
-        
+
         return {
             "success": True,
-            "data": [dict(appt) for appt in appointments]
+            "data": {
+                "appointments": [dict(appt) for appt in appointments]
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1423,6 +1651,34 @@ async def websocket_chat(websocket: WebSocket, user_id: int):
 # ============================================
 # ADMIN PORTAL ENDPOINTS
 # ============================================
+
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/api/v1/admin/login")
+async def admin_login(credentials: AdminLogin):
+    """Admin login with server-side credential validation"""
+    try:
+        from config import ADMIN_USERNAME, ADMIN_PASSWORD
+
+        if credentials.username == ADMIN_USERNAME and credentials.password == ADMIN_PASSWORD:
+            return {
+                "success": True,
+                "data": {
+                    "username": credentials.username,
+                    "token": f"admin_{credentials.username}"
+                },
+                "message": "Welcome, Admin!"
+            }
+        else:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) / "data" / "uploaded_docs"

@@ -19,7 +19,6 @@ export interface Patient {
   user_id: number;
   name: string;
   email: string;
-  phone: string;
   date_of_birth?: string;
   gender?: string;
 }
@@ -29,7 +28,6 @@ export interface Doctor {
   name: string;
   specialty: string;
   email?: string;
-  phone?: string;
   rating?: number;
   calendar_id?: string;
   consultation_duration?: number;
@@ -65,17 +63,45 @@ export interface ChatMessage {
 }
 
 export interface DoctorStats {
+  today_count: number;
   total_patients: number;
-  total_appointments: number;
-  upcoming_appointments: number;
-  completed_today: number;
+  week_count: number;
+  completion_rate: number;
+}
+
+export interface DoctorProfile {
+  doctor_id: number;
+  name: string;
+  email: string;
+  specialty: string;
+  consultation_duration: number;
+  created_at: string;
+  stats: {
+    total_patients: number;
+    total_appointments: number;
+    completed_appointments: number;
+    upcoming_appointments: number;
+    completion_rate: number;
+  };
+}
+
+export interface AvailabilitySettings {
+  consultation_duration: number;
+  start_time: string;
+  end_time: string;
+  schedule: Record<number, { start_time: string; end_time: string; is_active: boolean }[]>;
 }
 
 export interface Analytics {
+  period: { start_date: string; end_date: string };
   total_appointments: number;
-  new_patients: number;
-  average_rating?: number;
-  monthly_data?: any[];
+  total_patients: number;
+  avg_daily_appointments: number;
+  completion_rate: number;
+  status_breakdown: Record<string, number>;
+  daily_breakdown: { date: string; count: number }[];
+  weekly_breakdown: Record<string, number>;
+  patient_growth: { week: string; count: number }[];
 }
 
 // API Error Handler
@@ -89,7 +115,7 @@ class ApiError extends Error {
 async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new ApiError(response.status, error.message || 'API request failed');
+    throw new ApiError(response.status, error.detail || error.message || 'API request failed');
   }
   return response.json();
 }
@@ -105,7 +131,7 @@ export const patientApi = {
   register: async (data: {
     name: string;
     email: string;
-    phone: string;
+    password: string;
     dob?: string;
     gender?: string;
   }): Promise<ApiResponse<{ user_id: number; name: string }>> => {
@@ -122,8 +148,8 @@ export const patientApi = {
    */
   login: async (data: {
     email: string;
-    phone: string;
-  }): Promise<ApiResponse<{ user_id: number; name: string; email: string; phone: string; token: string }>> => {
+    password: string;
+  }): Promise<ApiResponse<{ user_id: number; name: string; email: string; token: string }>> => {
     const response = await fetch(`${API_BASE_URL}/patients/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -218,12 +244,58 @@ export const doctorApi = {
   },
 
   /**
+   * Get doctor profile with stats
+   */
+  getProfile: async (doctorId: number): Promise<ApiResponse<DoctorProfile>> => {
+    const response = await fetch(`${API_BASE_URL}/doctors/${doctorId}/profile`);
+    return handleResponse(response);
+  },
+
+  /**
+   * Update doctor profile
+   */
+  updateProfile: async (
+    doctorId: number,
+    data: { name?: string; email?: string; specialty?: string; consultation_duration?: number }
+  ): Promise<ApiResponse<any>> => {
+    const response = await fetch(`${API_BASE_URL}/doctors/${doctorId}/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get doctor availability settings
+   */
+  getAvailabilitySettings: async (doctorId: number): Promise<ApiResponse<AvailabilitySettings>> => {
+    const response = await fetch(`${API_BASE_URL}/doctors/${doctorId}/availability-settings`);
+    return handleResponse(response);
+  },
+
+  /**
+   * Update doctor availability settings
+   */
+  updateAvailabilitySettings: async (
+    doctorId: number,
+    data: { start_time: string; end_time: string; consultation_duration?: number }
+  ): Promise<ApiResponse<any>> => {
+    const response = await fetch(`${API_BASE_URL}/doctors/${doctorId}/availability-settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  },
+
+  /**
    * Register a new doctor
    */
   register: async (data: {
     name: string;
     email: string;
-    phone: string;
+    password: string;
     specialty: string;
     consultation_duration?: number;
   }): Promise<ApiResponse<{ doctor_id: number; name: string; specialty: string }>> => {
@@ -240,7 +312,7 @@ export const doctorApi = {
    */
   login: async (data: {
     email: string;
-    phone: string;
+    password: string;
   }): Promise<ApiResponse<{ doctor_id: number; name: string; specialty: string; token: string }>> => {
     const response = await fetch(`${API_BASE_URL}/doctors/login`, {
       method: 'POST',
@@ -508,6 +580,64 @@ export const systemApi = {
   },
 };
 
+// ============================================
+// ADMIN ENDPOINTS
+// ============================================
+
+export const adminApi = {
+  /**
+   * Admin login
+   */
+  login: async (data: {
+    username: string;
+    password: string;
+  }): Promise<ApiResponse<{ username: string; token: string }>> => {
+    const response = await fetch(`${API_BASE_URL}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get uploaded documents
+   */
+  getDocuments: async (): Promise<ApiResponse<{ documents: any[] }>> => {
+    const response = await fetch(`${API_BASE_URL}/admin/documents`);
+    return handleResponse(response);
+  },
+
+  /**
+   * Upload documents
+   */
+  uploadDocuments: async (formData: FormData): Promise<ApiResponse<any>> => {
+    const response = await fetch(`${API_BASE_URL}/admin/documents/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Delete a document
+   */
+  deleteDocument: async (docId: string): Promise<ApiResponse<any>> => {
+    const response = await fetch(`${API_BASE_URL}/admin/documents/${docId}`, {
+      method: 'DELETE',
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get admin/RAG stats
+   */
+  getStats: async (): Promise<ApiResponse<any>> => {
+    const response = await fetch(`${API_BASE_URL}/admin/stats`);
+    return handleResponse(response);
+  },
+};
+
 // Export default API client
 export default {
   patient: patientApi,
@@ -515,4 +645,5 @@ export default {
   appointment: appointmentApi,
   chat: chatApi,
   system: systemApi,
+  admin: adminApi,
 };
