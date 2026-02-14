@@ -4,7 +4,7 @@ Provides REST API endpoints for Patient and Doctor portals
 Runs locally on device (no external dependencies)
 """
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
@@ -13,6 +13,9 @@ import pytz
 import json
 import sys
 import os
+import uuid
+import shutil
+from pathlib import Path
 
 # Set Pakistan/Asia timezone
 PAKISTAN_TZ = pytz.timezone('Asia/Karachi')
@@ -40,10 +43,12 @@ app.add_middleware(
         "http://localhost:5173",  # Vite default
         "http://localhost:8080",  # Vite alternative port
         "http://localhost:8081",  # Vite alternative port 2
+        "http://localhost:8082",  # Vite alternative port 3
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:8080",
         "http://127.0.0.1:8081",
+        "http://127.0.0.1:8082",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -128,8 +133,16 @@ class ChatMessage(BaseModel):
     user_id: int
     message: str
 
+class DoctorRegister(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    specialty: str
+    consultation_duration: Optional[int] = 30
+
 class DoctorLogin(BaseModel):
-    doctor_id: int
+    email: EmailStr
+    phone: str
 
 class PreferencesUpdate(BaseModel):
     email_notifications: Optional[bool] = None
@@ -844,25 +857,75 @@ async def update_preferences(user_id: int, prefs: PreferencesUpdate):
 # DOCTOR PORTAL ENDPOINTS
 # ============================================
 
-@app.post("/api/v1/doctors/login")
-async def doctor_login(credentials: DoctorLogin):
-    """Doctor login"""
+@app.post("/api/v1/doctors/register")
+async def register_doctor(doctor: DoctorRegister):
+    """Register a new doctor"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
+        # Check if email already exists
+        cursor.execute('SELECT doctor_id FROM doctors WHERE email = ?', (doctor.email,))
+        if cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=409, detail="A doctor with this email already exists")
+
+        # Insert doctor
+        cursor.execute('''
+            INSERT INTO doctors (name, email, phone, specialty, consultation_duration)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (doctor.name, doctor.email, doctor.phone, doctor.specialty, doctor.consultation_duration))
+
+        doctor_id = cursor.lastrowid
+
+        # Seed default availability: Mon-Fri, 9AM-12PM + 1PM-5PM
+        for day in range(5):
+            cursor.execute('''
+                INSERT INTO doctor_availability (doctor_id, day_of_week, start_time, end_time)
+                VALUES (?, ?, ?, ?)
+            ''', (doctor_id, day, '09:00', '12:00'))
+            cursor.execute('''
+                INSERT INTO doctor_availability (doctor_id, day_of_week, start_time, end_time)
+                VALUES (?, ?, ?, ?)
+            ''', (doctor_id, day, '13:00', '17:00'))
+
+        conn.commit()
+        conn.close()
+
+        return {
+            "success": True,
+            "data": {
+                "doctor_id": doctor_id,
+                "name": doctor.name,
+                "specialty": doctor.specialty,
+            },
+            "message": "Registration successful!"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/doctors/login")
+async def doctor_login(credentials: DoctorLogin):
+    """Doctor login with email and phone"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
         cursor.execute('''
             SELECT doctor_id, name, specialty, calendar_id
             FROM doctors
-            WHERE doctor_id = ?
-        ''', (credentials.doctor_id,))
-        
+            WHERE email = ? AND phone = ?
+        ''', (credentials.email, credentials.phone))
+
         doctor = cursor.fetchone()
         conn.close()
-        
+
         if not doctor:
-            raise HTTPException(status_code=404, detail="Doctor not found")
-        
+            raise HTTPException(status_code=404, detail="Doctor not found. Please check your email and phone number.")
+
         return {
             "success": True,
             "data": {
@@ -1355,6 +1418,253 @@ async def websocket_chat(websocket: WebSocket, user_id: int):
         except:
             pass
         await websocket.close()
+
+
+# ============================================
+# ADMIN PORTAL ENDPOINTS
+# ============================================
+
+# Create uploads directory if it doesn't exist
+UPLOAD_DIR = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) / "data" / "uploaded_docs"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Metadata storage for uploaded documents
+DOCS_METADATA_FILE = UPLOAD_DIR / "metadata.json"
+
+def load_docs_metadata():
+    """Load document metadata from file"""
+    if DOCS_METADATA_FILE.exists():
+        with open(DOCS_METADATA_FILE, 'r') as f:
+            return json.load(f)
+    return []
+
+def save_docs_metadata(metadata):
+    """Save document metadata to file"""
+    with open(DOCS_METADATA_FILE, 'w') as f:
+        json.dump(metadata, f, indent=2)
+
+@app.get("/api/v1/admin/documents")
+async def get_uploaded_documents():
+    """Get list of all uploaded documents"""
+    try:
+        metadata = load_docs_metadata()
+        return {
+            "success": True,
+            "data": {
+                "documents": metadata
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/admin/documents/upload")
+async def upload_documents(files: List[UploadFile] = File(...)):
+    """Upload medical documents and add to RAG system"""
+    try:
+        if not files:
+            raise HTTPException(status_code=400, detail="No files provided")
+        
+        uploaded_docs = []
+        metadata = load_docs_metadata()
+        
+        for file in files:
+            # Validate file type
+            allowed_extensions = ['.pdf', '.txt', '.md']
+            file_ext = os.path.splitext(file.filename)[1].lower()
+            
+            if file_ext not in allowed_extensions:
+                continue
+            
+            # Generate unique ID and save file
+            doc_id = str(uuid.uuid4())
+            file_path = UPLOAD_DIR / f"{doc_id}_{file.filename}"
+            
+            # Save uploaded file
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            # Get file size
+            file_size = os.path.getsize(file_path)
+            
+            # Create metadata entry
+            doc_metadata = {
+                "id": doc_id,
+                "filename": file.filename,
+                "size": file_size,
+                "uploaded_at": datetime.now().isoformat(),
+                "status": "pending",
+                "doc_type": file_ext[1:].upper(),
+                "file_path": str(file_path)
+            }
+            
+            metadata.append(doc_metadata)
+            uploaded_docs.append(doc_metadata)
+        
+        # Save metadata
+        save_docs_metadata(metadata)
+        
+        # Process documents in background (simplified - in production use celery/background tasks)
+        try:
+            await process_documents_for_rag(uploaded_docs)
+        except Exception as e:
+            print(f"Background processing error: {e}")
+        
+        return {
+            "success": True,
+            "data": {
+                "uploaded": len(uploaded_docs),
+                "documents": uploaded_docs
+            },
+            "message": f"Successfully uploaded {len(uploaded_docs)} document(s)"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+async def process_documents_for_rag(docs):
+    """Process uploaded documents and add to RAG vector database"""
+    try:
+        from utils.document_processor import DocumentProcessor
+        import traceback
+        import time
+        
+        rag = get_rag_engine()
+        if not rag:
+            print("⚠️  Warning: RAG engine not available")
+            return
+        
+        processor = DocumentProcessor(chunk_size=500, chunk_overlap=50)
+        metadata = load_docs_metadata()
+        
+        for doc in docs:
+            try:
+                file_path = doc['file_path']
+                print(f"\n📄 Processing document: {doc['filename']}")
+                
+                # Process document (works for PDF, TXT, MD)
+                chunks = processor.process_document(
+                    filepath=file_path,
+                    doc_type=doc['doc_type'],
+                    author="Admin Upload",
+                    url=""
+                )
+                
+                if chunks:
+                    print(f"  ✓ Created {len(chunks)} chunks")
+                    
+                    # Update chunk IDs to include timestamp to avoid conflicts
+                    timestamp = str(int(time.time()))
+                    for i, chunk in enumerate(chunks):
+                        chunk['metadata']['chunk_id'] = f"{doc['id']}_{timestamp}_{i}"
+                        chunk['id'] = f"{doc['id']}_{timestamp}_{i}"
+                    
+                    # Add to RAG engine
+                    rag.add_documents(chunks)
+                    print(f"  ✓ Added to RAG vector database")
+                    
+                    # Verify it was added
+                    rag_stats = rag.get_stats()
+                    print(f"  ℹ️  Total chunks in database: {rag_stats['total_documents']}")
+                    
+                    # Update status in metadata
+                    for m in metadata:
+                        if m['id'] == doc['id']:
+                            m['status'] = 'indexed'
+                            m['chunks_count'] = len(chunks)
+                            print(f"  ✓ Status updated to 'indexed'")
+                            break
+                else:
+                    print(f"  ✗ No chunks created")
+                    # Mark as error
+                    for m in metadata:
+                        if m['id'] == doc['id']:
+                            m['status'] = 'error'
+                            break
+                            
+            except Exception as e:
+                print(f"❌ Error processing {doc['filename']}: {e}")
+                traceback.print_exc()
+                # Mark as error
+                for m in metadata:
+                    if m['id'] == doc['id']:
+                        m['status'] = 'error'
+                        break
+        
+        # Save updated metadata
+        save_docs_metadata(metadata)
+        print("✅ Metadata saved")
+        
+    except Exception as e:
+        print(f"❌ RAG processing error: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+@app.delete("/api/v1/admin/documents/{doc_id}")
+async def delete_document(doc_id: str):
+    """Delete an uploaded document"""
+    try:
+        metadata = load_docs_metadata()
+        
+        # Find and remove document
+        doc_found = False
+        updated_metadata = []
+        
+        for doc in metadata:
+            if doc['id'] == doc_id:
+                doc_found = True
+                # Delete physical file
+                try:
+                    if os.path.exists(doc['file_path']):
+                        os.remove(doc['file_path'])
+                except Exception as e:
+                    print(f"Error deleting file: {e}")
+            else:
+                updated_metadata.append(doc)
+        
+        if not doc_found:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # Save updated metadata
+        save_docs_metadata(updated_metadata)
+        
+        return {
+            "success": True,
+            "message": "Document deleted successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/admin/stats")
+async def get_admin_stats():
+    """Get RAG system statistics"""
+    try:
+        rag = get_rag_engine()
+        metadata = load_docs_metadata()
+        
+        stats = {
+            "total_documents": len(metadata),
+            "total_chunks": 0,
+            "collection_name": ""
+        }
+        
+        if rag:
+            rag_stats = rag.get_stats()
+            stats["total_chunks"] = rag_stats.get('total_documents', 0)
+            stats["collection_name"] = rag_stats.get('collection_name', '')
+        
+        return {
+            "success": True,
+            "data": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================
